@@ -45,6 +45,44 @@ static int pfGetObject(RedisModuleKey *key, Prefix_Filter<TC_shortcut> **sbout) 
     return i;
 }
 
+static int PFExists_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+    RedisModule_AutoMemory(ctx);
+    std::hash<std::string> stdhash;
+
+    if (argc < 2) {
+        return RedisModule_WrongArity(ctx);
+    }
+
+    printf("got here\n");
+    RedisModuleKey *key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ | REDISMODULE_WRITE);
+
+    Prefix_Filter<TC_shortcut> *pf = NULL;
+    if (pfGetObject(key, &pf) < 0) {
+      return RedisModule_ReplyWithError(ctx, "error fetching table by key");
+    }
+
+    printf("got there\n");
+    printf("%p\n", pf);
+    if (pf == NULL) {
+      return RedisModule_ReplyWithError(ctx, "internal server error");
+    }
+
+    size_t len = 0;
+    std::string str = RedisModule_StringPtrLen(argv[2], &len);
+
+    unsigned long long h = stdhash(str);
+
+    printf("got here again\n");
+
+    int result = FilterAPI<Prefix_Filter<TC_shortcut>>::Contain(h, pf);
+
+    RedisModule_ReplyWithLongLong(ctx, result);
+
+    printf("done\n");
+    return REDISMODULE_OK;
+}
+
+
 static int PFAdd_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
     RedisModule_AutoMemory(ctx);
     std::hash<std::string> stdhash;
@@ -141,6 +179,10 @@ int RedisModule_OnLoad(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) 
 
     if (RedisModule_CreateCommand(ctx,"pf.add",
                                   PFAdd_RedisCommand, "write",
+                                  1, 1, 1) == REDISMODULE_ERR)
+      return REDISMODULE_ERR;
+    if (RedisModule_CreateCommand(ctx,"pf.exists",
+                                  PFExists_RedisCommand, "write",
                                   1, 1, 1) == REDISMODULE_ERR)
       return REDISMODULE_ERR;
 
