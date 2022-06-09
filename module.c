@@ -3,9 +3,8 @@
 #include <string>
 #include <vector>
 
-
-#include "redismodule.h"
 #include <stdlib.h>
+#include "redismodule.h"
 #include "Prefix-Filter/Tests/wrappers.hpp"
 
 #ifdef __cplusplus
@@ -14,13 +13,7 @@ extern "C" {
 
 static RedisModuleType * PFType;
 
-int HelloworldRand_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
-    RedisModule_ReplyWithLongLong(ctx,rand());
-    FilterAPI<Prefix_Filter<TC_shortcut>>::ConstructFromAddCount(1000000);
-    return REDISMODULE_OK;
-}
-
-static int getValue(RedisModuleKey *key, RedisModuleType *expType, void **sbout) {
+static int pfGetValue(RedisModuleKey *key, RedisModuleType *expType, void **sbout) {
     *sbout = NULL;
     if (key == NULL) {
         return -1;
@@ -39,9 +32,7 @@ static int getValue(RedisModuleKey *key, RedisModuleType *expType, void **sbout)
 
 
 static int pfGetObject(RedisModuleKey *key, Prefix_Filter<TC_shortcut> **sbout) {
-    printf("pfGetObject\n");
-    int i = getValue(key, PFType, (void **)sbout);
-    printf("%d\n", i);
+    int i = pfGetValue(key, PFType, (void **)sbout);
     return i;
 }
 
@@ -53,7 +44,6 @@ static int PFExists_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, 
         return RedisModule_WrongArity(ctx);
     }
 
-    printf("got here\n");
     RedisModuleKey *key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ | REDISMODULE_WRITE);
 
     Prefix_Filter<TC_shortcut> *pf = NULL;
@@ -61,8 +51,6 @@ static int PFExists_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, 
       return RedisModule_ReplyWithError(ctx, "error fetching table by key");
     }
 
-    printf("got there\n");
-    printf("%p\n", pf);
     if (pf == NULL) {
       return RedisModule_ReplyWithError(ctx, "internal server error");
     }
@@ -72,13 +60,10 @@ static int PFExists_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, 
 
     unsigned long long h = stdhash(str);
 
-    printf("got here again\n");
-
     int result = FilterAPI<Prefix_Filter<TC_shortcut>>::Contain(h, pf);
 
     RedisModule_ReplyWithLongLong(ctx, result);
 
-    printf("done\n");
     return REDISMODULE_OK;
 }
 
@@ -91,7 +76,6 @@ static int PFAdd_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int
         return RedisModule_WrongArity(ctx);
     }
 
-    printf("got here\n");
     RedisModuleKey *key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ | REDISMODULE_WRITE);
 
     Prefix_Filter<TC_shortcut> *pf = NULL;
@@ -99,8 +83,6 @@ static int PFAdd_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int
       return RedisModule_ReplyWithError(ctx, "error fetching table by key");
     }
 
-    printf("got there\n");
-    printf("%p\n", pf);
     if (pf == NULL) {
       return RedisModule_ReplyWithError(ctx, "internal server error");
     }
@@ -110,15 +92,10 @@ static int PFAdd_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int
 
     unsigned long long h = stdhash(str);
 
-    printf("got here again\n");
-
-    printf("size: %lu\n", FilterAPI<Prefix_Filter<TC_shortcut>>::get_cap(pf));
-
     FilterAPI<Prefix_Filter<TC_shortcut>>::Add(h, pf);
 
     RedisModule_ReplyWithSimpleString(ctx, "OK");
 
-    printf("done\n");
     return REDISMODULE_OK;
 }
 
@@ -139,16 +116,9 @@ static int PFReserve_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv,
     RedisModuleKey *key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ | REDISMODULE_WRITE);
     float loads[2] = {.95, .95};
 
-    Prefix_Filter<TC_shortcut>* foo = new Prefix_Filter<TC_shortcut>(capacity, loads);
+    Prefix_Filter<TC_shortcut>* table = new Prefix_Filter<TC_shortcut>(capacity, loads);
 
-    printf("%p\n", foo);
-    printf("func: %u\n", FilterAPI<Prefix_Filter<TC_shortcut>>::get_functionality(foo));
-    printf("cap: %lu\n", FilterAPI<Prefix_Filter<TC_shortcut>>::get_cap(foo));
-
-    FilterAPI<Prefix_Filter<TC_shortcut>>::Add(9999, foo);
-
-    printf("new cap: %lu\n", FilterAPI<Prefix_Filter<TC_shortcut>>::get_cap(foo));
-    RedisModule_ModuleTypeSetValue(key, PFType, foo);
+    RedisModule_ModuleTypeSetValue(key, PFType, table);
 
     RedisModule_ReplyWithSimpleString(ctx, "OK");
 
