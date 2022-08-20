@@ -6,15 +6,19 @@ import (
 	"time"
 )
 
-func RunTest(parallelTests int, f func() error) (time.Duration, error) {
-	g, _ := errgroup.WithContext(context.Background())
-	start := time.Now()
-	for i := 0; i < parallelTests; i++ {
-		g.Go(f)
+func RunTest(avgOfIterations, parallelTests int, f func() error) (time.Duration, error) {
+	totalDuration := time.Duration(0)
+	for i := 0; i < avgOfIterations; i++ {
+		g, _ := errgroup.WithContext(context.Background())
+		start := time.Now()
+		for i := 0; i < parallelTests; i++ {
+			g.Go(f)
+		}
+		err := g.Wait()
+		if err != nil {
+			return 0, err
+		}
+		totalDuration += time.Now().Sub(start)
 	}
-	err := g.Wait()
-	if err != nil {
-		return 0, err
-	}
-	return time.Now().Sub(start), nil
+	return time.Duration(int64(totalDuration) / int64(avgOfIterations)), nil
 }

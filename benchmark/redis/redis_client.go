@@ -23,8 +23,8 @@ func NewRedisClient() *RedisClient {
 	}
 }
 
-func (r *RedisClient) ReserveBF() error {
-	_, err := bfReserveScript.exec(context.Background(), r.client, []string{bfKey})
+func (r *RedisClient) ReserveBF(errorRate float64, capacity int64) error {
+	_, err := bfReserveScript.exec(context.Background(), r.client, []string{bfKey}, errorRate, capacity)
 	return err
 }
 
@@ -36,4 +36,9 @@ func (r *RedisClient) DeleteBF() error {
 func (r *RedisClient) MAddBF(items []string) error {
 	_, err := bfMAddScript.exec(context.Background(), r.client, []string{bfKey}, items)
 	return err
+}
+
+func (r *RedisClient) ExistsBF(item string) (bool, error) {
+	_, err := bfExistsScript.exec(context.Background(), r.client, []string{bfKey}, item)
+	return false, err
 }

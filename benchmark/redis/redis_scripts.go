@@ -13,8 +13,8 @@ const luaDirPath = "scripts"
 
 var (
 	//bfInfoScript    = newScript("bf_info")
-	bfMAddScript = newScript("bf_madd")
-	//bfExistsScript  = newScript("bf_exists")
+	bfMAddScript    = newScript("bf_madd")
+	bfExistsScript  = newScript("bf_exists")
 	bfReserveScript = newScript("bf_reserve")
 )
 
