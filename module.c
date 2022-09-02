@@ -36,12 +36,13 @@ static int pfGetObject(RedisModuleKey *key, Prefix_Filter<TC_shortcut> **sbout) 
     return i;
 }
 
-static int PFExists_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+  static int PFExists_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+    bool err = false;
     RedisModule_AutoMemory(ctx);
     std::hash<std::string> stdhash;
 
     if (argc < 2) {
-        return RedisModule_WrongArity(ctx);
+      return RedisModule_WrongArity(ctx);
     }
 
     RedisModuleKey *key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ | REDISMODULE_WRITE);
@@ -56,19 +57,74 @@ static int PFExists_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, 
     }
 
     size_t len = 0;
-    std::string str = RedisModule_StringPtrLen(argv[2], &len);
 
-    unsigned long long h = stdhash(str);
+    if (argc == 3) {
+      std::string str = RedisModule_StringPtrLen(argv[2], &len);
 
-    int result = FilterAPI<Prefix_Filter<TC_shortcut>>::Contain(h, pf);
+      unsigned long long h = stdhash(str);
 
-    RedisModule_ReplyWithLongLong(ctx, result);
+      int result = FilterAPI<Prefix_Filter<TC_shortcut>>::Contain(h, pf);
 
+      RedisModule_ReplyWithLongLong(ctx, result);
+      return REDISMODULE_OK;
+    } else {
+      int * successes = NULL;
+      u64 * foos = NULL;
+      unsigned long i = 0;
+      unsigned long foolen = argc - 2;
+      foos = (unsigned long *)malloc(sizeof(*foos)*(foolen));
+      if (foos == NULL) {
+        exit(-5);
+      }
+      for (i = 0; i < foolen; i++) {
+        foos[i] = stdhash(RedisModule_StringPtrLen(argv[i+2], &len));
+      }
+      successes = FilterAPI<Prefix_Filter<TC_shortcut>>::MultiExists(foolen, foos, pf);
+      if (successes == NULL) {
+        err = true;
+        goto cleanup;
+      }
+
+    cleanup:
+      if (foos) free(foos);
+      if (err) {
+        if (successes) free(successes);
+        return REDISMODULE_ERR;
+      } else {
+        RedisModule_ReplyWithArray(ctx, foolen);
+        for (i = 0; i < foolen; i++) {
+          RedisModule_ReplyWithLongLong(ctx, successes[i]);
+        }
+        free(successes);
+        return REDISMODULE_OK;
+      }
+
+    }
+
+    return REDISMODULE_OK;
+  }
+
+static int PFInfo_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+    RedisModule_AutoMemory(ctx);
+    if (argc != 2) {
+        return RedisModule_WrongArity(ctx);
+    }
+
+    RedisModuleKey *key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ);
+    Prefix_Filter<TC_shortcut> *pf = NULL;
+    if (pfGetObject(key, &pf) < 0) {
+        return RedisModule_ReplyWithError(ctx, "error fetching table by key");
+    }
+
+    RedisModule_ReplyWithArray(ctx, 2 * 2);
+    RedisModule_ReplyWithSimpleString(ctx, "Capacity");
+    RedisModule_ReplyWithLongLong(ctx, pf->get_max_capacity());
+    RedisModule_ReplyWithSimpleString(ctx, "Size");
+    RedisModule_ReplyWithLongLong(ctx, pf->get_cap());
     return REDISMODULE_OK;
 }
 
-
-  static int PFAdd_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+static int PFAdd_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
     bool err = false;
     RedisModule_AutoMemory(ctx);
     std::hash<std::string> stdhash;
@@ -173,11 +229,16 @@ static void BFAofRewrite(RedisModuleIO *aof, RedisModuleString *key, void *value
 static void BFFree(void *value) { (void)value; }
 
 int RedisModule_OnLoad(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
-    if (RedisModule_Init(ctx,"avromodule",1,REDISMODULE_APIVER_1)
-        == REDISMODULE_ERR) return REDISMODULE_ERR;
+    if (RedisModule_Init(ctx,"pf",1,REDISMODULE_APIVER_1) == REDISMODULE_ERR)
+      return REDISMODULE_ERR;
 
     if (RedisModule_CreateCommand(ctx,"pf.reserve",
                                   PFReserve_RedisCommand, "write",
+                                  1, 1, 1) == REDISMODULE_ERR)
+      return REDISMODULE_ERR;
+
+    if (RedisModule_CreateCommand(ctx,"pf.info",
+                                  PFInfo_RedisCommand, "readonly",
                                   1, 1, 1) == REDISMODULE_ERR)
       return REDISMODULE_ERR;
 
@@ -191,8 +252,13 @@ int RedisModule_OnLoad(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) 
                                   1, 1, 1) == REDISMODULE_ERR)
       return REDISMODULE_ERR;
 
+    if (RedisModule_CreateCommand(ctx,"pf.mexists",
+                                  PFExists_RedisCommand, "readonly",
+                                  1, 1, 1) == REDISMODULE_ERR)
+      return REDISMODULE_ERR;
+
     if (RedisModule_CreateCommand(ctx,"pf.exists",
-                                  PFExists_RedisCommand, "write",
+                                  PFExists_RedisCommand, "readonly",
                                   1, 1, 1) == REDISMODULE_ERR)
       return REDISMODULE_ERR;
 
