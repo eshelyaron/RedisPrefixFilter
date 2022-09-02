@@ -12,10 +12,17 @@ import (
 const luaDirPath = "scripts"
 
 var (
-	//bfInfoScript    = newScript("bf_info")
 	bfMAddScript    = newScript("bf_madd")
 	bfExistsScript  = newScript("bf_exists")
 	bfReserveScript = newScript("bf_reserve")
+
+	cfAddScript     = newScript("cf_add")
+	cfExistsScript  = newScript("cf_exists")
+	cfReserveScript = newScript("cf_reserve")
+
+	pfMAddScript    = newScript("pf_madd")
+	pfExistsScript  = newScript("pf_exists")
+	pfReserveScript = newScript("pf_reserve")
 )
 
 type redisScript struct {
