@@ -40,17 +40,18 @@ func dumpTestResults(testName string, t map[string][]TestResult) {
 func RunLoadTests() error {
 	var err error
 	var testResult map[string][]TestResult
-	testResult, err = testMAddPerNumberOfParalleledTests()
-	if err != nil {
-		return err
-	}
-	processTestResults("testMAddPerNumberOfParalleledTests", testResult)
 
-	testResult, err = testMAddPerNumberOfItems()
-	if err != nil {
-		return err
-	}
-	processTestResults("testMAddPerNumberOfItems", testResult)
+	//testResult, err = testMAddPerNumberOfParalleledTests()
+	//if err != nil {
+	//	return err
+	//}
+	//processTestResults("testMAddPerNumberOfParalleledTests", testResult)
+
+	//testResult, err = testMAddPerNumberOfItems()
+	//if err != nil {
+	//	return err
+	//}
+	//processTestResults("testMAddPerNumberOfItems", testResult)
 
 	testResult, err = testExistsPerNumberOfParalleledTests()
 	if err != nil {

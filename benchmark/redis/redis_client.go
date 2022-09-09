@@ -50,14 +50,30 @@ func (r *RedisClient) DeleteBF() error {
 	return res.Err()
 }
 
+func (r *RedisClient) AddBF(item string) error {
+	_, err := bfAddScript.exec(context.Background(), r.client, []string{bfKey}, item)
+	return err
+}
+
 func (r *RedisClient) MAddBF(items []string) error {
 	_, err := bfMAddScript.exec(context.Background(), r.client, []string{bfKey}, items)
 	return err
 }
 
-func (r *RedisClient) ExistsBF(item string) (bool, error) { //TODO return real value
-	_, err := bfExistsScript.exec(context.Background(), r.client, []string{bfKey}, item)
-	return false, err
+func (r *RedisClient) ExistsBF(item string) (int64, error) {
+	res, err := bfExistsScript.exec(context.Background(), r.client, []string{bfKey}, item)
+	if err != nil {
+		return 0, err
+	}
+	return res.(int64), err
+}
+
+func (r *RedisClient) MExistsBF(items []string) ([]interface{}, error) {
+	res, err := bfMExistsScript.exec(context.Background(), r.client, []string{bfKey}, items)
+	if err != nil {
+		return nil, err
+	}
+	return res.([]interface{}), err
 }
 
 //endregion
@@ -79,9 +95,12 @@ func (r *RedisClient) AddCF(items []string) error {
 	return err
 }
 
-func (r *RedisClient) ExistsCF(item string) (bool, error) {
-	_, err := cfExistsScript.exec(context.Background(), r.client, []string{cfKey}, item)
-	return false, err
+func (r *RedisClient) ExistsCF(item string) (int64, error) {
+	res, err := cfExistsScript.exec(context.Background(), r.client, []string{cfKey}, item)
+	if err != nil {
+		return 0, err
+	}
+	return res.(int64), err
 }
 
 //endregion
@@ -102,6 +121,15 @@ func (r *RedisClient) DeletePF() error {
 	return res.Err()
 }
 
+func (r *RedisClient) AddPF(item string) error {
+	if !isPrefixFilterSupported {
+		_, err := bfAddScript.exec(context.Background(), r.client, []string{pfKey}, item)
+		return err
+	}
+	_, err := pfAddScript.exec(context.Background(), r.client, []string{pfKey}, item)
+	return err
+}
+
 func (r *RedisClient) MAddPF(items []string) error {
 	if !isPrefixFilterSupported {
 		_, err := bfMAddScript.exec(context.Background(), r.client, []string{pfKey}, items)
@@ -111,13 +139,34 @@ func (r *RedisClient) MAddPF(items []string) error {
 	return err
 }
 
-func (r *RedisClient) ExistsPF(item string) (bool, error) {
+func (r *RedisClient) ExistsPF(item string) (int64, error) {
 	if !isPrefixFilterSupported {
-		_, err := bfExistsScript.exec(context.Background(), r.client, []string{pfKey}, item)
-		return false, err
+		res, err := bfExistsScript.exec(context.Background(), r.client, []string{pfKey}, item)
+		if err != nil {
+			return 0, err
+		}
+		return res.(int64), err
 	}
-	_, err := pfExistsScript.exec(context.Background(), r.client, []string{pfKey}, item)
-	return false, err
+	res, err := pfExistsScript.exec(context.Background(), r.client, []string{pfKey}, item)
+	if err != nil {
+		return 0, err
+	}
+	return res.(int64), err
+}
+
+func (r *RedisClient) MExistsPF(items []string) ([]interface{}, error) {
+	if !isPrefixFilterSupported {
+		res, err := bfMExistsScript.exec(context.Background(), r.client, []string{pfKey}, items)
+		if err != nil {
+			return nil, err
+		}
+		return res.([]interface{}), err
+	}
+	res, err := pfMExistsScript.exec(context.Background(), r.client, []string{pfKey}, items)
+	if err != nil {
+		return nil, err
+	}
+	return res.([]interface{}), err
 }
 
 //endregion

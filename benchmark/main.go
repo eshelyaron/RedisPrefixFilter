@@ -30,11 +30,16 @@ func main() {
 		logrus.WithError(err).Error("reservePF")
 		return
 	}
-	err = RunLoadTests()
+	err = runCorrectnessTests()
 	if err != nil {
-		logrus.WithError(err).Error("RunLoadTests")
+		logrus.WithError(err).Error("RunCorrectnessTests")
 		return
 	}
+	//err = RunLoadTests()
+	//if err != nil {
+	//	logrus.WithError(err).Error("RunLoadTests")
+	//	return
+	//}
 }
 
 func initRedis() {

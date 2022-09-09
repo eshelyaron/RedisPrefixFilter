@@ -13,15 +13,19 @@ const luaDirPath = "scripts"
 
 var (
 	bfMAddScript    = newScript("bf_madd")
+	bfAddScript     = newScript("bf_add")
 	bfExistsScript  = newScript("bf_exists")
+	bfMExistsScript = newScript("bf_mexists")
 	bfReserveScript = newScript("bf_reserve")
 
 	cfAddScript     = newScript("cf_add")
 	cfExistsScript  = newScript("cf_exists")
 	cfReserveScript = newScript("cf_reserve")
 
+	pfAddScript     = newScript("pf_add")
 	pfMAddScript    = newScript("pf_madd")
 	pfExistsScript  = newScript("pf_exists")
+	pfMExistsScript = newScript("pf_mexists")
 	pfReserveScript = newScript("pf_reserve")
 )
 
