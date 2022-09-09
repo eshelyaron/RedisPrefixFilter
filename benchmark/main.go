@@ -35,11 +35,11 @@ func main() {
 		logrus.WithError(err).Error("RunCorrectnessTests")
 		return
 	}
-	//err = RunLoadTests()
-	//if err != nil {
-	//	logrus.WithError(err).Error("RunLoadTests")
-	//	return
-	//}
+	err = RunLoadTests()
+	if err != nil {
+		logrus.WithError(err).Error("RunLoadTests")
+		return
+	}
 }
 
 func initRedis() {

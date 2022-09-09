@@ -103,6 +103,14 @@ func (r *RedisClient) ExistsCF(item string) (int64, error) {
 	return res.(int64), err
 }
 
+func (r *RedisClient) MExistsCF(items []string) ([]interface{}, error) {
+	res, err := cfMExistsScript.exec(context.Background(), r.client, []string{bfKey}, items)
+	if err != nil {
+		return nil, err
+	}
+	return res.([]interface{}), err
+}
+
 //endregion
 
 //region PF

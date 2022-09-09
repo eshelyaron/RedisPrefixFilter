@@ -13,6 +13,11 @@ func runCorrectnessTests() error {
 		logrus.Error(err)
 		return err
 	}
+	err = testPF()
+	if err != nil {
+		logrus.Error(err)
+		return err
+	}
 	logrus.Infof("All correctness tests passed!")
 	return nil
 }

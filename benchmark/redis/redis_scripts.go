@@ -20,6 +20,7 @@ var (
 
 	cfAddScript     = newScript("cf_add")
 	cfExistsScript  = newScript("cf_exists")
+	cfMExistsScript = newScript("cf_mexists")
 	cfReserveScript = newScript("cf_reserve")
 
 	pfAddScript     = newScript("pf_add")

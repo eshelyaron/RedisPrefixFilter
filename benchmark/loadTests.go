@@ -41,23 +41,31 @@ func RunLoadTests() error {
 	var err error
 	var testResult map[string][]TestResult
 
-	//testResult, err = testMAddPerNumberOfParalleledTests()
-	//if err != nil {
-	//	return err
-	//}
-	//processTestResults("testMAddPerNumberOfParalleledTests", testResult)
+	testResult, err = testMAddPerNumberOfParalleledTests()
+	if err != nil {
+		return err
+	}
+	processTestResults("testMAddPerNumberOfParalleledTests", testResult)
 
-	//testResult, err = testMAddPerNumberOfItems()
-	//if err != nil {
-	//	return err
-	//}
-	//processTestResults("testMAddPerNumberOfItems", testResult)
+	testResult, err = testMAddPerNumberOfItems()
+	if err != nil {
+		return err
+	}
+	processTestResults("testMAddPerNumberOfItems", testResult)
 
 	testResult, err = testExistsPerNumberOfParalleledTests()
 	if err != nil {
 		return err
 	}
 	processTestResults("testExistsPerNumberOfParalleledTests", testResult)
+
+	//testResult, err = testMExistsPerNumberOfItems() //TODO continue
+	//if err != nil {
+	//	return err
+	//}
+	//processTestResults("testMExistsPerNumberOfItems", testResult)
+
+	logrus.Infof("All load tests finished successfully!")
 	return nil
 }
 
@@ -119,15 +127,14 @@ func testMAddPerNumberOfItems() (map[string][]TestResult, error) {
 }
 
 func testMAddTime(filterType string, parallelTests, numberOfAdds int) (time.Duration, error) {
+	strArr := utils.GetRandomStrings(10, 20, numberOfAdds)
 	if filterType == "bf" {
 		return utils.RunTest(avgOfIterations, parallelTests, func() error {
-			strArr := utils.GetRandomStrings(10, 20, numberOfAdds)
 			return redisClient.MAddBF(strArr)
 		})
 	}
 	if filterType == "pf" {
 		return utils.RunTest(avgOfIterations, parallelTests, func() error {
-			strArr := utils.GetRandomStrings(10, 20, numberOfAdds)
 			return redisClient.MAddPF(strArr)
 		})
 	}
@@ -139,8 +146,9 @@ func testExistsPerNumberOfParalleledTests() (map[string][]TestResult, error) {
 	bfResults := make([]TestResult, 0)
 	cfResults := make([]TestResult, 0)
 	pfResults := make([]TestResult, 0)
+	numberOfItems := 1
 	for i := 1; i < 300; i += 20 {
-		d, err := testExistsTime("bf", i)
+		d, err := testExistsTime("bf", i, numberOfItems)
 		if err != nil {
 			return nil, err
 		}
@@ -148,7 +156,7 @@ func testExistsPerNumberOfParalleledTests() (map[string][]TestResult, error) {
 			X: i,
 			Y: d,
 		})
-		d, err = testExistsTime("cf", i)
+		d, err = testExistsTime("cf", i, numberOfItems)
 		if err != nil {
 			return nil, err
 		}
@@ -157,7 +165,7 @@ func testExistsPerNumberOfParalleledTests() (map[string][]TestResult, error) {
 			Y: d,
 		})
 
-		d, err = testExistsTime("pf", i)
+		d, err = testExistsTime("pf", i, numberOfItems)
 		if err != nil {
 			return nil, err
 		}
@@ -172,25 +180,23 @@ func testExistsPerNumberOfParalleledTests() (map[string][]TestResult, error) {
 	return res, nil
 }
 
-func testExistsTime(filterType string, parallelTests int) (time.Duration, error) {
+func testExistsTime(filterType string, parallelTests, numberOfItems int) (time.Duration, error) {
+	strArr := utils.GetRandomStrings(10, 20, numberOfItems)
 	if filterType == "bf" {
 		return utils.RunTest(avgOfIterations, parallelTests, func() error {
-			str := utils.GetRandomString(20)
-			_, err := redisClient.ExistsBF(str)
+			_, err := redisClient.MExistsBF(strArr)
 			return err
 		})
 	}
 	if filterType == "cf" {
 		return utils.RunTest(avgOfIterations, parallelTests, func() error {
-			str := utils.GetRandomString(20)
-			_, err := redisClient.ExistsCF(str)
+			_, err := redisClient.MExistsCF(strArr)
 			return err
 		})
 	}
 	if filterType == "pf" {
 		return utils.RunTest(avgOfIterations, parallelTests, func() error {
-			str := utils.GetRandomString(20)
-			_, err := redisClient.ExistsPF(str)
+			_, err := redisClient.MExistsPF(strArr)
 			return err
 		})
 	}
