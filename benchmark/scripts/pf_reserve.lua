@@ -1,6 +1,6 @@
 local function reserve(key, capacity)
     redis.call('DEL', key)
-    return redis.call('CF.RESERVE', key, capacity)
+    return redis.call('PF.RESERVE', key, capacity)
 end
 
 assert(#KEYS == 1, 'Expecting key')
