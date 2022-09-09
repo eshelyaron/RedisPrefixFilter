@@ -3,21 +3,30 @@ package redis
 import (
 	"context"
 	"github.com/go-redis/redis/v8"
+	"math"
 	"os"
 )
-
-const bfKey = "bfKey"
-const cfKey = "cfKey"
-const pfKey = "pfKey"
 
 type RedisClient struct {
 	client *redis.Client
 }
 
+const bfKey = "bfKey"
+const cfKey = "cfKey"
+const pfKey = "pfKey"
+
+var (
+	isPrefixFilterSupported bool
+	defaultErrorRate        = float64(1) / math.Pow(10, 6)
+)
+
 func NewRedisClient() *RedisClient {
 	addr := "localhost:6379"
 	if envAddr := os.Getenv("redisURL"); envAddr != "" {
 		addr = envAddr
+	}
+	if isPFSupported := os.Getenv("IS_PF_SUPPORTED"); isPFSupported != "0" {
+		isPrefixFilterSupported = true
 	}
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     addr,
@@ -46,7 +55,7 @@ func (r *RedisClient) MAddBF(items []string) error {
 	return err
 }
 
-func (r *RedisClient) ExistsBF(item string) (bool, error) {
+func (r *RedisClient) ExistsBF(item string) (bool, error) { //TODO return real value
 	_, err := bfExistsScript.exec(context.Background(), r.client, []string{bfKey}, item)
 	return false, err
 }
@@ -80,6 +89,10 @@ func (r *RedisClient) ExistsCF(item string) (bool, error) {
 //region PF
 
 func (r *RedisClient) ReservePF(capacity int64) error {
+	if !isPrefixFilterSupported {
+		_, err := bfReserveScript.exec(context.Background(), r.client, []string{pfKey}, defaultErrorRate, capacity)
+		return err
+	}
 	_, err := pfReserveScript.exec(context.Background(), r.client, []string{pfKey}, capacity)
 	return err
 }
@@ -90,11 +103,19 @@ func (r *RedisClient) DeletePF() error {
 }
 
 func (r *RedisClient) MAddPF(items []string) error {
+	if !isPrefixFilterSupported {
+		_, err := bfMAddScript.exec(context.Background(), r.client, []string{pfKey}, items)
+		return err
+	}
 	_, err := pfMAddScript.exec(context.Background(), r.client, []string{pfKey}, items)
 	return err
 }
 
 func (r *RedisClient) ExistsPF(item string) (bool, error) {
+	if !isPrefixFilterSupported {
+		_, err := bfExistsScript.exec(context.Background(), r.client, []string{pfKey}, item)
+		return false, err
+	}
 	_, err := pfExistsScript.exec(context.Background(), r.client, []string{pfKey}, item)
 	return false, err
 }
