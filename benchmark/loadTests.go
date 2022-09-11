@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-const avgOfIterations = 100
+const avgOfIterations = 50
 
 type TestResult struct {
 	X int           `json:"x"`
@@ -76,7 +76,7 @@ func testMAddPerNumberOfParalleledTests() (map[string][]TestResult, error) {
 	bfResults := make([]TestResult, 0)
 	pfResults := make([]TestResult, 0)
 	numberOfAdds := 1
-	for i := 1; i < 1000; i += 20 {
+	for i := 1; i < 256; i += 16 {
 		d, err := testMAddTime("bf", i, numberOfAdds)
 		if err != nil {
 			return nil, err
@@ -192,7 +192,7 @@ func testExistsPerNumberOfParalleledTests() (map[string][]TestResult, error) {
 	cfResults := make([]TestResult, 0)
 	pfResults := make([]TestResult, 0)
 	numberOfItems := 1
-	for i := 1; i < 1000; i += 20 {
+	for i := 1; i < 256; i += 16 {
 		d, err := testMExistsTime("bf", i, numberOfItems)
 		if err != nil {
 			return nil, err
