@@ -8,7 +8,6 @@ import (
 )
 
 func RunTest(avgOfIterations, parallelTests int, f func() error) (time.Duration, error) {
-	logrus.Infof("%s\n", time.Now().UTC().String())
 	totalDuration := time.Duration(0)
 	for i := 0; i < avgOfIterations; i++ {
 		g, _ := errgroup.WithContext(context.Background())

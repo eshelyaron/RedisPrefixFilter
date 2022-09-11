@@ -59,11 +59,11 @@ func RunLoadTests() error {
 	}
 	processTestResults("testExistsPerNumberOfParalleledTests", testResult)
 
-	//testResult, err = testMExistsPerNumberOfItems() //TODO continue
-	//if err != nil {
-	//	return err
-	//}
-	//processTestResults("testMExistsPerNumberOfItems", testResult)
+	testResult, err = testMExistsPerNumberOfItems()
+	if err != nil {
+		return err
+	}
+	processTestResults("testMExistsPerNumberOfItems", testResult)
 
 	logrus.Infof("All load tests finished successfully!")
 	return nil
@@ -74,7 +74,7 @@ func testMAddPerNumberOfParalleledTests() (map[string][]TestResult, error) {
 	bfResults := make([]TestResult, 0)
 	pfResults := make([]TestResult, 0)
 	numberOfAdds := 200
-	for i := 1; i < 200; i += 10 {
+	for i := 1; i < 50; i += 10 {
 		d, err := testMAddTime("bf", i, numberOfAdds)
 		if err != nil {
 			return nil, err
@@ -103,7 +103,7 @@ func testMAddPerNumberOfItems() (map[string][]TestResult, error) {
 	bfResults := make([]TestResult, 0)
 	pfResults := make([]TestResult, 0)
 	parallelTests := 1
-	for i := 1; i < 1500; i += 10 {
+	for i := 1; i < 500; i += 10 {
 		d, err := testMAddTime("bf", parallelTests, i)
 		if err != nil {
 			return nil, err
@@ -138,17 +138,21 @@ func testMAddTime(filterType string, parallelTests, numberOfAdds int) (time.Dura
 			return redisClient.MAddPF(strArr)
 		})
 	}
+	if filterType == "cf" {
+		logrus.Infof("cuckoo filter don't support the MADD command")
+		logrus.Exit(0)
+	}
 	return 0, unknownFilterType
 }
 
-func testExistsPerNumberOfParalleledTests() (map[string][]TestResult, error) {
+func testMExistsPerNumberOfItems() (map[string][]TestResult, error) {
 	res := make(map[string][]TestResult)
 	bfResults := make([]TestResult, 0)
 	cfResults := make([]TestResult, 0)
 	pfResults := make([]TestResult, 0)
-	numberOfItems := 1
-	for i := 1; i < 300; i += 20 {
-		d, err := testExistsTime("bf", i, numberOfItems)
+	parallelTests := 1
+	for i := 1; i < 500; i += 100 {
+		d, err := testMExistsTime("bf", parallelTests, i)
 		if err != nil {
 			return nil, err
 		}
@@ -156,7 +160,7 @@ func testExistsPerNumberOfParalleledTests() (map[string][]TestResult, error) {
 			X: i,
 			Y: d,
 		})
-		d, err = testExistsTime("cf", i, numberOfItems)
+		d, err = testMExistsTime("cf", parallelTests, i)
 		if err != nil {
 			return nil, err
 		}
@@ -165,7 +169,7 @@ func testExistsPerNumberOfParalleledTests() (map[string][]TestResult, error) {
 			Y: d,
 		})
 
-		d, err = testExistsTime("pf", i, numberOfItems)
+		d, err = testMExistsTime("pf", parallelTests, i)
 		if err != nil {
 			return nil, err
 		}
@@ -180,7 +184,46 @@ func testExistsPerNumberOfParalleledTests() (map[string][]TestResult, error) {
 	return res, nil
 }
 
-func testExistsTime(filterType string, parallelTests, numberOfItems int) (time.Duration, error) {
+func testExistsPerNumberOfParalleledTests() (map[string][]TestResult, error) {
+	res := make(map[string][]TestResult)
+	bfResults := make([]TestResult, 0)
+	cfResults := make([]TestResult, 0)
+	pfResults := make([]TestResult, 0)
+	numberOfItems := 1
+	for i := 1; i < 300; i += 20 {
+		d, err := testMExistsTime("bf", i, numberOfItems)
+		if err != nil {
+			return nil, err
+		}
+		bfResults = append(bfResults, TestResult{
+			X: i,
+			Y: d,
+		})
+		d, err = testMExistsTime("cf", i, numberOfItems)
+		if err != nil {
+			return nil, err
+		}
+		cfResults = append(cfResults, TestResult{
+			X: i,
+			Y: d,
+		})
+
+		d, err = testMExistsTime("pf", i, numberOfItems)
+		if err != nil {
+			return nil, err
+		}
+		pfResults = append(pfResults, TestResult{
+			X: i,
+			Y: d,
+		})
+	}
+	res["bf"] = bfResults
+	res["cf"] = cfResults
+	res["pf"] = pfResults
+	return res, nil
+}
+
+func testMExistsTime(filterType string, parallelTests, numberOfItems int) (time.Duration, error) {
 	strArr := utils.GetRandomStrings(10, 20, numberOfItems)
 	if filterType == "bf" {
 		return utils.RunTest(avgOfIterations, parallelTests, func() error {
