@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-const avgOfIterations = 10
+const avgOfIterations = 32
 
 var (
 	redisClient *redis.RedisClient
@@ -65,7 +65,7 @@ func getCMD() (string, string, int, int) {
 	if err != nil {
 		logrus.Fatalf("expected # of parallel tests to be integer, got %s.\n", args[2])
 	}
-	records, err := strconv.Atoi(args[2])
+	records, err := strconv.Atoi(args[3])
 	if err != nil {
 		logrus.Fatalf("expected # of records to be integer, got %s.\n", args[3])
 	}
