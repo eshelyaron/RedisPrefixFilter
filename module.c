@@ -31,7 +31,7 @@ static int pfGetValue(RedisModuleKey *key, RedisModuleType *expType, void **sbou
 }
 
 
-static int pfGetObject(RedisModuleKey *key, Prefix_Filter<TC_shortcut> **sbout) {
+static int pfGetObject(RedisModuleKey *key, Prefix_Filter<SimdBlockFilterFixed<>> **sbout) {
     int i = pfGetValue(key, PFType, (void **)sbout);
     return i;
 }
@@ -47,7 +47,7 @@ static int pfGetObject(RedisModuleKey *key, Prefix_Filter<TC_shortcut> **sbout) 
 
     RedisModuleKey *key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ | REDISMODULE_WRITE);
 
-    Prefix_Filter<TC_shortcut> *pf = NULL;
+    Prefix_Filter<SimdBlockFilterFixed<>> *pf = NULL;
     if (pfGetObject(key, &pf) < 0) {
       return RedisModule_ReplyWithError(ctx, "error fetching table by key");
     }
@@ -63,7 +63,7 @@ static int pfGetObject(RedisModuleKey *key, Prefix_Filter<TC_shortcut> **sbout) 
 
       unsigned long long h = stdhash(str);
 
-      int result = FilterAPI<Prefix_Filter<TC_shortcut>>::Contain(h, pf);
+      int result = FilterAPI<Prefix_Filter<SimdBlockFilterFixed<>>>::Contain(h, pf);
 
       RedisModule_ReplyWithLongLong(ctx, result);
       return REDISMODULE_OK;
@@ -79,7 +79,7 @@ static int pfGetObject(RedisModuleKey *key, Prefix_Filter<TC_shortcut> **sbout) 
       for (i = 0; i < foolen; i++) {
         foos[i] = stdhash(RedisModule_StringPtrLen(argv[i+2], &len));
       }
-      successes = FilterAPI<Prefix_Filter<TC_shortcut>>::MultiExists(foolen, foos, pf);
+      successes = FilterAPI<Prefix_Filter<SimdBlockFilterFixed<>>>::MultiExists(foolen, foos, pf);
       if (successes == NULL) {
         err = true;
         goto cleanup;
@@ -111,7 +111,7 @@ static int PFInfo_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, in
     }
 
     RedisModuleKey *key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ);
-    Prefix_Filter<TC_shortcut> *pf = NULL;
+    Prefix_Filter<SimdBlockFilterFixed<>> *pf = NULL;
     if (pfGetObject(key, &pf) < 0) {
         return RedisModule_ReplyWithError(ctx, "error fetching table by key");
     }
@@ -135,7 +135,7 @@ static int PFAdd_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int
 
     RedisModuleKey *key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ | REDISMODULE_WRITE);
 
-    Prefix_Filter<TC_shortcut> *pf = NULL;
+    Prefix_Filter<SimdBlockFilterFixed<>> *pf = NULL;
     if (pfGetObject(key, &pf) < 0) {
       return RedisModule_ReplyWithError(ctx, "error fetching table by key");
     }
@@ -150,7 +150,7 @@ static int PFAdd_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int
 
       unsigned long long h = stdhash(str);
 
-      FilterAPI<Prefix_Filter<TC_shortcut>>::Add(h, pf);
+      FilterAPI<Prefix_Filter<SimdBlockFilterFixed<>>>::Add(h, pf);
 
       RedisModule_ReplyWithSimpleString(ctx, "OK");
 
@@ -167,7 +167,7 @@ static int PFAdd_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int
       for (i = 0; i < foolen; i++) {
         foos[i] = stdhash(RedisModule_StringPtrLen(argv[i+2], &len));
       }
-      successes = FilterAPI<Prefix_Filter<TC_shortcut>>::MultiAdd(foolen, foos, pf);
+      successes = FilterAPI<Prefix_Filter<SimdBlockFilterFixed<>>>::MultiAdd(foolen, foos, pf);
       if (successes == NULL) {
         err = true;
         goto cleanup;
@@ -206,7 +206,7 @@ static int PFReserve_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv,
     RedisModuleKey *key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ | REDISMODULE_WRITE);
     float loads[2] = {.95, .95};
 
-    Prefix_Filter<TC_shortcut>* table = new Prefix_Filter<TC_shortcut>(capacity, loads);
+    Prefix_Filter<SimdBlockFilterFixed<>>* table = new Prefix_Filter<SimdBlockFilterFixed<>>(capacity, loads);
 
     RedisModule_ModuleTypeSetValue(key, PFType, table);
 
