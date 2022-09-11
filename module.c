@@ -58,7 +58,9 @@ static int pfGetObject(RedisModuleKey *key, Prefix_Filter<SimdBlockFilterFixed<>
 
     size_t len = 0;
 
-    if (argc == 3) {
+    const char * command = RedisModule_StringPtrLen(argv[0], &len);
+
+    if (argc == 3 && ( strcasecmp(command, "PF.EXISTS") == 0)) {
       std::string str = RedisModule_StringPtrLen(argv[2], &len);
 
       unsigned long long h = stdhash(str);
