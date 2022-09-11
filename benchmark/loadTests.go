@@ -74,7 +74,7 @@ func testMAddPerNumberOfParalleledTests() (map[string][]TestResult, error) {
 	bfResults := make([]TestResult, 0)
 	pfResults := make([]TestResult, 0)
 	numberOfAdds := 200
-	for i := 1; i < 50; i += 10 {
+	for i := 1; i < 300; i += 10 {
 		d, err := testMAddTime("bf", i, numberOfAdds)
 		if err != nil {
 			return nil, err
@@ -103,7 +103,7 @@ func testMAddPerNumberOfItems() (map[string][]TestResult, error) {
 	bfResults := make([]TestResult, 0)
 	pfResults := make([]TestResult, 0)
 	parallelTests := 1
-	for i := 1; i < 500; i += 10 {
+	for i := 1; i < 1500; i += 10 {
 		d, err := testMAddTime("bf", parallelTests, i)
 		if err != nil {
 			return nil, err
@@ -151,7 +151,7 @@ func testMExistsPerNumberOfItems() (map[string][]TestResult, error) {
 	cfResults := make([]TestResult, 0)
 	pfResults := make([]TestResult, 0)
 	parallelTests := 1
-	for i := 1; i < 500; i += 100 {
+	for i := 1; i < 1500; i += 100 {
 		d, err := testMExistsTime("bf", parallelTests, i)
 		if err != nil {
 			return nil, err
