@@ -79,7 +79,7 @@ def plt_exists_per_number_of_concurrent_requests():
 def plt_mexists_per_number_of_items():
     fig, ax = plt.subplots()
 
-    f = open('../results/testExistsPerNumberOfParalleledTests.json')
+    f = open('../results/testMExistsPerNumberOfItems.json')
     data = json.load(f)
     bf_pts = [(p["x"], p["y"]) for p in data['bf']]
     data_as_array = np.array(bf_pts)
@@ -103,8 +103,8 @@ def plt_mexists_per_number_of_items():
     plt.ylabel('nanoseconds')
 
 if __name__ == '__main__':
-    # plt_exists_per_number_of_concurrent_requests()
-    # plt_madd_per_number_of_concurrent_requests()
-    # plt_madd_per_number_of_items()
+    plt_exists_per_number_of_concurrent_requests()
+    plt_madd_per_number_of_concurrent_requests()
+    plt_madd_per_number_of_items()
     plt_mexists_per_number_of_items()
     plt.show()

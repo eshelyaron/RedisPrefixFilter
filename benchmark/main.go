@@ -9,8 +9,6 @@ import (
 	"time"
 )
 
-const avgOfIterations = 32
-
 var (
 	redisClient *redis.RedisClient
 	capacity    = math.Pow(10, 6)
