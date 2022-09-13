@@ -67,6 +67,12 @@ func RunLoadTests() error {
 	}
 	processTestResults("testMExistsPerNumberOfItems", testResult)
 
+	testResult, err = testMExistsPerNumberOfItemsAlwaysNegative()
+	if err != nil {
+		return err
+	}
+	processTestResults("testMExistsPerNumberOfItemsAlwaysNegative", testResult)
+
 	logrus.Infof("All load tests finished successfully!")
 	return nil
 }
@@ -153,6 +159,57 @@ func testMExistsPerNumberOfItems() (map[string][]TestResult, error) {
 	cfResults := make([]TestResult, 0)
 	pfResults := make([]TestResult, 0)
 	parallelTests := 1
+	for i := 1; i < 5000; i += 50 {
+		d, err := testMExistsTime("bf", parallelTests, i)
+		if err != nil {
+			return nil, err
+		}
+		bfResults = append(bfResults, TestResult{
+			X: i,
+			Y: d,
+		})
+		d, err = testMExistsTime("cf", parallelTests, i)
+		if err != nil {
+			return nil, err
+		}
+		cfResults = append(cfResults, TestResult{
+			X: i,
+			Y: d,
+		})
+
+		d, err = testMExistsTime("pf", parallelTests, i)
+		if err != nil {
+			return nil, err
+		}
+		pfResults = append(pfResults, TestResult{
+			X: i,
+			Y: d,
+		})
+	}
+	res["bf"] = bfResults
+	res["cf"] = cfResults
+	res["pf"] = pfResults
+	return res, nil
+}
+
+func testMExistsPerNumberOfItemsAlwaysNegative() (map[string][]TestResult, error) {
+	res := make(map[string][]TestResult)
+	bfResults := make([]TestResult, 0)
+	cfResults := make([]TestResult, 0)
+	pfResults := make([]TestResult, 0)
+	parallelTests := 1
+	err := reserveBF()
+	if err != nil {
+		return nil, err
+	}
+	err = reserveCF()
+	if err != nil {
+		return nil, err
+	}
+	err = reservePF()
+	if err != nil {
+		return nil, err
+	}
 	for i := 1; i < 5000; i += 50 {
 		d, err := testMExistsTime("bf", parallelTests, i)
 		if err != nil {
