@@ -1,2 +1,5 @@
 /module.so
 .idea/misc.xml
+/benchmark/benchmark
+/benchmark/results/
+/tasks.org

@@ -11,30 +11,30 @@
 extern "C" {
 #endif
 
-static RedisModuleType * PFType;
+  static RedisModuleType * PFType;
 
-static int pfGetValue(RedisModuleKey *key, RedisModuleType *expType, void **sbout) {
+  static int pfGetValue(RedisModuleKey *key, RedisModuleType *expType, void **sbout) {
     *sbout = NULL;
     if (key == NULL) {
-        return -1;
+      return -1;
     }
     int type = RedisModule_KeyType(key);
     if (type == REDISMODULE_KEYTYPE_EMPTY) {
-        return -2;
+      return -2;
     } else if (type == REDISMODULE_KEYTYPE_MODULE &&
                RedisModule_ModuleTypeGetType(key) == expType) {
-        *sbout = RedisModule_ModuleTypeGetValue(key);
-        return 0;
+      *sbout = RedisModule_ModuleTypeGetValue(key);
+      return 0;
     } else {
-        return -3;
+      return -3;
     }
-}
+  }
 
 
-static int pfGetObject(RedisModuleKey *key, Prefix_Filter<SimdBlockFilterFixed<>> **sbout) {
+  static int pfGetObject(RedisModuleKey *key, Prefix_Filter<SimdBlockFilterFixed<>> **sbout) {
     int i = pfGetValue(key, PFType, (void **)sbout);
     return i;
-}
+  }
 
   static int PFExists_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
     bool err = false;
@@ -71,30 +71,30 @@ static int pfGetObject(RedisModuleKey *key, Prefix_Filter<SimdBlockFilterFixed<>
       return REDISMODULE_OK;
     } else {
       int * successes = NULL;
-      u64 * foos = NULL;
+      u64 * values = NULL;
       unsigned long i = 0;
-      unsigned long foolen = argc - 2;
-      foos = (unsigned long *)malloc(sizeof(*foos)*(foolen));
-      if (foos == NULL) {
+      unsigned long valuelen = argc - 2;
+      values = (unsigned long *)malloc(sizeof(*values)*(valuelen));
+      if (values == NULL) {
         exit(-5);
       }
-      for (i = 0; i < foolen; i++) {
-        foos[i] = stdhash(RedisModule_StringPtrLen(argv[i+2], &len));
+      for (i = 0; i < valuelen; i++) {
+        values[i] = stdhash(RedisModule_StringPtrLen(argv[i+2], &len));
       }
-      successes = FilterAPI<Prefix_Filter<SimdBlockFilterFixed<>>>::MultiExists(foolen, foos, pf);
+      successes = FilterAPI<Prefix_Filter<SimdBlockFilterFixed<>>>::MultiExists(valuelen, values, pf);
       if (successes == NULL) {
         err = true;
         goto cleanup;
       }
 
     cleanup:
-      if (foos) free(foos);
+      if (values) free(values);
       if (err) {
         if (successes) free(successes);
         return REDISMODULE_ERR;
       } else {
-        RedisModule_ReplyWithArray(ctx, foolen);
-        for (i = 0; i < foolen; i++) {
+        RedisModule_ReplyWithArray(ctx, valuelen);
+        for (i = 0; i < valuelen; i++) {
           RedisModule_ReplyWithLongLong(ctx, successes[i]);
         }
         free(successes);
@@ -106,27 +106,29 @@ static int pfGetObject(RedisModuleKey *key, Prefix_Filter<SimdBlockFilterFixed<>
     return REDISMODULE_OK;
   }
 
-static int PFInfo_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+  static int PFInfo_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
     RedisModule_AutoMemory(ctx);
     if (argc != 2) {
-        return RedisModule_WrongArity(ctx);
+      return RedisModule_WrongArity(ctx);
     }
 
     RedisModuleKey *key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ);
     Prefix_Filter<SimdBlockFilterFixed<>> *pf = NULL;
     if (pfGetObject(key, &pf) < 0) {
-        return RedisModule_ReplyWithError(ctx, "error fetching table by key");
+      return RedisModule_ReplyWithError(ctx, "error fetching table by key");
     }
 
-    RedisModule_ReplyWithArray(ctx, 2 * 2);
+    RedisModule_ReplyWithArray(ctx, 3 * 2);
     RedisModule_ReplyWithSimpleString(ctx, "Capacity");
     RedisModule_ReplyWithLongLong(ctx, pf->get_max_capacity());
-    RedisModule_ReplyWithSimpleString(ctx, "Size");
+    RedisModule_ReplyWithSimpleString(ctx, "Filled");
     RedisModule_ReplyWithLongLong(ctx, pf->get_cap());
+    RedisModule_ReplyWithSimpleString(ctx, "Size");
+    RedisModule_ReplyWithLongLong(ctx, pf->get_byte_size());
     return REDISMODULE_OK;
-}
+  }
 
-static int PFAdd_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+  static int PFAdd_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
     bool err = false;
     RedisModule_AutoMemory(ctx);
     std::hash<std::string> stdhash;
@@ -159,30 +161,30 @@ static int PFAdd_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int
       return REDISMODULE_OK;
     } else {
       int * successes = NULL;
-      u64 * foos = NULL;
+      u64 * values = NULL;
       unsigned long i = 0;
-      unsigned long foolen = argc - 2;
-      foos = (unsigned long *)malloc(sizeof(*foos)*(foolen));
-      if (foos == NULL) {
+      unsigned long valuelen = argc - 2;
+      values = (unsigned long *)malloc(sizeof(*values)*(valuelen));
+      if (values == NULL) {
         exit(-5);
       }
-      for (i = 0; i < foolen; i++) {
-        foos[i] = stdhash(RedisModule_StringPtrLen(argv[i+2], &len));
+      for (i = 0; i < valuelen; i++) {
+        values[i] = stdhash(RedisModule_StringPtrLen(argv[i+2], &len));
       }
-      successes = FilterAPI<Prefix_Filter<SimdBlockFilterFixed<>>>::MultiAdd(foolen, foos, pf);
+      successes = FilterAPI<Prefix_Filter<SimdBlockFilterFixed<>>>::MultiAdd(valuelen, values, pf);
       if (successes == NULL) {
         err = true;
         goto cleanup;
       }
 
     cleanup:
-      if (foos) free(foos);
+      if (values) free(values);
       if (err) {
         if (successes) free(successes);
         return REDISMODULE_ERR;
       } else {
-        RedisModule_ReplyWithArray(ctx, foolen);
-        for (i = 0; i < foolen; i++) {
+        RedisModule_ReplyWithArray(ctx, valuelen);
+        for (i = 0; i < valuelen; i++) {
           RedisModule_ReplyWithLongLong(ctx, successes[i]);
         }
         free(successes);
@@ -191,18 +193,18 @@ static int PFAdd_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int
     }
   }
 
-static int PFReserve_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+  static int PFReserve_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
     RedisModule_AutoMemory(ctx);
 
     if (argc < 2) {
-        return RedisModule_WrongArity(ctx);
+      return RedisModule_WrongArity(ctx);
     }
 
     long long capacity;
     if (RedisModule_StringToLongLong(argv[2], &capacity) != REDISMODULE_OK) {
-        return RedisModule_ReplyWithError(ctx, "ERR bad capacity");
+      return RedisModule_ReplyWithError(ctx, "ERR bad capacity");
     } else if (capacity <= 0) {
-        return RedisModule_ReplyWithError(ctx, "ERR (capacity should be larger than 0)");
+      return RedisModule_ReplyWithError(ctx, "ERR (capacity should be larger than 0)");
     }
 
     RedisModuleKey *key = RedisModule_OpenKey(ctx, argv[1], REDISMODULE_READ | REDISMODULE_WRITE);
@@ -215,22 +217,22 @@ static int PFReserve_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv,
     RedisModule_ReplyWithSimpleString(ctx, "OK");
 
     return REDISMODULE_OK;
-}
+  }
 
 
-static void BFRdbSave(RedisModuleIO *io, void *obj) {}
+  static void BFRdbSave(RedisModuleIO *io, void *obj) {}
 
-static void *BFRdbLoad(RedisModuleIO *io, int encver) {
-  return NULL;
-}
+  static void *BFRdbLoad(RedisModuleIO *io, int encver) {
+    return NULL;
+  }
 
-static void BFAofRewrite(RedisModuleIO *aof, RedisModuleString *key, void *value) {
-  (void)value;
-}
+  static void BFAofRewrite(RedisModuleIO *aof, RedisModuleString *key, void *value) {
+    (void)value;
+  }
 
-static void BFFree(void *value) { (void)value; }
+  static void BFFree(void *value) { (void)value; }
 
-int RedisModule_OnLoad(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+  int RedisModule_OnLoad(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
     if (RedisModule_Init(ctx,"pf",1,REDISMODULE_APIVER_1) == REDISMODULE_ERR)
       return REDISMODULE_ERR;
 
@@ -273,7 +275,7 @@ int RedisModule_OnLoad(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) 
     PFType = RedisModule_CreateDataType(ctx, "PFilter--", 0, &typeprocs);
 
     return REDISMODULE_OK;
-}
+  }
 
 #ifdef __cplusplus
 }
