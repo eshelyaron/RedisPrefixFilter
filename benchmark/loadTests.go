@@ -81,7 +81,7 @@ func testMAddPerNumberOfParalleledTests() (map[string][]TestResult, error) {
 	res := make(map[string][]TestResult)
 	bfResults := make([]TestResult, 0)
 	pfResults := make([]TestResult, 0)
-	numberOfAdds := 1
+	numberOfAdds := 10
 	for i := 1; i < 256; i += 16 {
 		d, err := testMAddTime("bf", i, numberOfAdds)
 		if err != nil {
@@ -197,7 +197,7 @@ func testMExistsPerNumberOfItemsAlwaysNegative() (map[string][]TestResult, error
 	bfResults := make([]TestResult, 0)
 	cfResults := make([]TestResult, 0)
 	pfResults := make([]TestResult, 0)
-	parallelTests := 1
+	parallelTests := 10
 	err := reserveBF()
 	if err != nil {
 		return nil, err
