@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+const avgOfIterations = 50
+
 type TestResult struct {
 	X int           `json:"x"`
 	Y time.Duration `json:"y"`
@@ -73,8 +75,8 @@ func testMAddPerNumberOfParalleledTests() (map[string][]TestResult, error) {
 	res := make(map[string][]TestResult)
 	bfResults := make([]TestResult, 0)
 	pfResults := make([]TestResult, 0)
-	numberOfAdds := 200
-	for i := 1; i < 300; i += 10 {
+	numberOfAdds := 1
+	for i := 1; i < 256; i += 16 {
 		d, err := testMAddTime("bf", i, numberOfAdds)
 		if err != nil {
 			return nil, err
@@ -103,7 +105,7 @@ func testMAddPerNumberOfItems() (map[string][]TestResult, error) {
 	bfResults := make([]TestResult, 0)
 	pfResults := make([]TestResult, 0)
 	parallelTests := 1
-	for i := 1; i < 1500; i += 10 {
+	for i := 1; i < 5000; i += 50 {
 		d, err := testMAddTime("bf", parallelTests, i)
 		if err != nil {
 			return nil, err
@@ -151,7 +153,7 @@ func testMExistsPerNumberOfItems() (map[string][]TestResult, error) {
 	cfResults := make([]TestResult, 0)
 	pfResults := make([]TestResult, 0)
 	parallelTests := 1
-	for i := 1; i < 1500; i += 100 {
+	for i := 1; i < 5000; i += 50 {
 		d, err := testMExistsTime("bf", parallelTests, i)
 		if err != nil {
 			return nil, err
@@ -190,7 +192,7 @@ func testExistsPerNumberOfParalleledTests() (map[string][]TestResult, error) {
 	cfResults := make([]TestResult, 0)
 	pfResults := make([]TestResult, 0)
 	numberOfItems := 1
-	for i := 1; i < 300; i += 20 {
+	for i := 1; i < 256; i += 16 {
 		d, err := testMExistsTime("bf", i, numberOfItems)
 		if err != nil {
 			return nil, err
