@@ -350,6 +350,13 @@ Although there is no improvement in any benchmark, the other filters
 outperform prefix filter at most by a constant factor (and not by an
 order of magnitude).
 * TODO Conclusion                                                      :yael:
+-The work was mainly divided into two parts: implementing the prefix filter code into Redis and Compare the performance of prefix pilter with bloom filter and cuckoo filter
+
+- results and conclusions: it was expected that the performance of the prefix filter will surpass the performance of bloom filter. However, we We saw that in all the indices we performed this is not the case. It is possible that if further improvements are made in the implementation, the results will be consistent with the theoy
+
+- Learning and application:  during the work We learned a lot about the theory and the implementation of the prefix filter, as well as working with redis server and RedisBloom.
+
+- Reading and deep understanding of the prefix filter implementation
 
 \bibliographystyle{plain}
 \bibliography{workshop.bib}
