@@ -81,7 +81,9 @@ $ ls -la *.png
 
 There is also ability to get the duration of a specific command against a specific filter type.  
 After building the benchmark module (go build) we can run the program with the following arguments:
+```
 ./benchmark ${command} ${filter_type} ${number_of_concurrent_calls} ${number_of_items_in_each_call}
+```
 where filter_type in {bf, cf, pf} and command is madd or mexists.
 
 For example
