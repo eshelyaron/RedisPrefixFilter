@@ -4,90 +4,115 @@
 #+bibliography: workshop.bib
 #+STARTUP: inlineimages indent contents
 #+LATEX_HEADER: \usepackage{natbib}
+#+LATEX_HEADER: \newtheorem{invariant}{Invariant}[section]
 
-* TODO Introduction                                                 :eshel:
+* Introduction
+
+This report presents our work on implementing a Redis module that
+provides an interface to the /Prefix Filter/ data structure.
+
+The first section includes background about the prefix filter and
+Redis in general.  The second section describes our implementation and
+explore future directions for development.  In the third section we
+evaluate our implementation compared to the standard Bloom Filter and
+Cuckoo Filter Redis modules.  The fourth and final section concludes
+our work and experiences.
 
 * Background: what we learned about Redis and PF
 
 ** Prefix Filter
-*** TODO Theory                                                   :eshel:
+*** Theory
 
 In \cite{even2022prefix}, the authors present the Prefix Filter, an
 incremental filter that aims to be near optimal in its space
 requirements, and provide fast queries and insertions, in comparison
-to state-of-the-art filters.
+to state-of-the-art filters.  Quoting \cite{even2022prefix}:
 
-The prefix filter uses a novel approach for resolving hash collisions...
+#+begin_quote
+The prefix filter shares the common high-level structure of mod- ern
+dynamic filters (hence, its space efficiency) but it exploits the lack
+of deletion support to simultaneously obtain fast queries and
+insertions... [It] uses a novel solution to the collision resolution
+problem, in which typically only a single cache line is accessed per
+filter operation.
+#+end_quote
+
+The prefix filter is a two-level structure, with each level storing
+/key fingerprints/, which are short hashes of the keys stored in the
+filter.  The first level is called the /bin table/, it is an array of
+compact dictionaries that facilitate constant time operations.  These
+dictionaries are called /pocket dictionaries/.  Pocket dictionaries have
+a very limited capacity, thus not all key fingerprints reside in the
+bin array.  The second level is called the /spare/. It holds
+fingerprints of keys that were evicted from the bin array.  The spare
+can implemented with any incremental filter.
+
+The essence of the prefix key is the policy it employs to choose which
+fingerprints to forward to the spare.  The policy maintains an
+invariant called the /Prefix Invariant/:
+
+\begin{invariant}[Prefix Invariant]
+Each bin $i$ contains a prefix of the sorted list of key fingerprints
+of keys that were inserted into the prefix filter and whose dedicated
+bin is $i$.
+\end{invariant}
 
 *** TODO Implementation                                              :yael:
-The FilterAPI struct is implemented in a cpp source file called "wrrapers.hpp". The prefix filter is a generic type, which implemented by FilterAPI:
-#+begin_src cpp
-template<typename filterTable>
-struct FilterAPI<Prefix_Filter<filterTable>> {
-  using Table = Prefix_Filter<filterTable>;
-  #+end_src
-  In wrapperc.hpp we find the implementation of the following methods:
-  
-  #1. ConstructFromAddCount: the constructor
-  #+begin_src cpp
-  static Table ConstructFromAddCount(size_t add_count)
-  #+end_src
-  #2. Add: add a key to the prefix filter
-  #+begin_src cpp
-  static void Add(u64 key, Table *table) 
-  #+end_src
-  #3. get_max_capacity: get max capacity of items that the filter can contain
-  #+begin_src cpp
-  static auto get_max_capacity(Table *table) 
-  #+end_src
-  #4. Remove: the implementaion is not supporting this method
-  #+begin_src cpp
-  static void Remove(u64 key, Table *table) 
-  #+end_src
-  #5.  Contain: check if the prefix filter contais the key
-  #+begin_src cpp
-  CONTAIN_ATTRIBUTES static bool Contain(u64 key, const Table *table) 
-  #+end_src
-  #6. get_name: returns the name of the filter
-  #+begin_src cpp
-  static std::string get_name(const Table *table) 
-  #+end_src
-  #7. get_functionality: returns a bit that represents some capability of the filter. for example, the third bit represents capability of deletions.
-  #+begin_src cpp
-  static auto get_functionality(const Table *table) 
-  #+end_src
-  #8. get_ID: retuns an identifier of the prefix filter
-  #+begin_src cpp
-  static auto get_ID(const Table *table) 
-  #+end_src
-  #9. get_byte_size: returns the size of the filter in bytes units
-  #+begin_src cpp
-  static size_t get_byte_size(const Table *table) 
-  #+end_src
-  #10 . get_cap: returns the current capacity of the prefix filter
-  #+begin_src cpp
-  static size_t get_cap(const Table *table) 
-  #+end_src
-
-
-
-
 
 requires AVX512...
 
 ** Redis
-*** TODO Introduction                                               :hadar:
-*** TODO The Redis module interface                                 :hadar:
+
+Redis is an open source, in-memory data structure store used as a database, cache,
+message broker, and streaming engine. Redis provides data structures such as strings,
+hashes, lists, sets, sorted sets, bitmaps, etc. Redis has built-in replication,
+Lua scripting, LRU eviction, transactions, and different levels of on-disk persistence,
+and provides high availability \cite{https://redis.io/docs/about/}.
+Redis is one of the most popular technologies and became a synonym
+for an In-Memory database. Furthermore, it repeatedly occures in the Stack Overflow’s
+annual developer survey under "most loved databases" catagory.
+\cite{https://redis.com/blog/redis-is-the-most-loved-database-for-the-4th-year-in-a-row/}.
+
+*** The Redis modules interface
+
+Redis modules make it possible to extend Redis functionality using external modules,
+rapidly implementing new Redis commands with features similar to what can be done inside the core itself.
+The full API that we used can be found in the official Redis documentation,
+and among other things contains loading module, creating commands and working with
+Redis module data objects.
+\cite{https://redis.io/docs/reference/modules/}
 
 * Challenges and solutions: what problems we encountered and how we solved them
 
-** TODO Developing on a remote host                                  :eshel:
+** Developing on a remote host
 
-** TODO Preparing the prefix filter for embedding in a shared object :eshel:
+Due to the fact that the prefix filter only runs and compiles on a
+Linux hosts with an Intel processor with the AVX512 CPU vector
+extension, the vast majority of the research and development work in
+this project had to be carried out on a remote server that has this
+extension.  This was challenging as we had to adapt our existing
+development setups to achieve an efficient workflow.  To minimize the
+cost of adapting to working on a remote development host, we leveraged
+GNU Emacs with TRAMP\footnote{See https://www.gnu.org/software/tramp/}
+which allowed us to edit, compile and execute remote files seamlessly
+while retaining the exact same setup and workflow we use for local
+development.
+
+** Preparing the prefix filter for embedding in a shared object
+
+Unlike the original prefix filter implementation which built the
+prefix filter as part of a standalone executable written solely in
+C++, our requirement was to embed the prefix filter implementation in
+a shared object that implements the Redis module ABI.  To do that we
+wrote a Makefile that leverages =g++= to build a shared library from the
+all of the C++ source files of the prefix filter along with our
+=module.c= source file which implements the Redis module API.
 
 ** TODO Adapting the prefix filter interface to the Redis module interface :eshel:
 
-** TODO Creating a setup for high performance benchmarks             :hadar:
+** Creating a setup for high performance benchmarks
+
+
 
 ** Design
 
@@ -205,6 +230,8 @@ OK
 
 * Evaluation: Comparison of the filters (Bloom vs. cuckoo vs. prefix)
 
+** Introduction
+
 A Benchmark in Performance Testing is a metric or a point of reference
 against which software products or services can be compared to assess
 the quality measures. In other words, Benchmark means a set standard
@@ -223,41 +250,60 @@ which measure the duration of the multi-add and multi-exists commands
 under different amount of items in the command and increasing amount
 of concurrent requests.
 
+** Implementation
+
+While creating the benchmarks, we decided to use the Golang programing language. Golang is expressive, clean, and efficient. Its concurrency mechanisms make it easy to write programs that get the most out of multicore and networked machines. We also had previous experience with creating a Redis client in Go that is able to perform non-standard Redis commands by using Lua scripts.
+
+We have created a generic test function which receive -
+- N - number of iterations
+- M - number of parallel tests
+- F - function to be tested
+and returns the average durtion of N iterations, each contains M concurrent callings to F.
+
+The benchmark folder includes -
+- redis - a Redis client which is able to perform non-standard Redis commands.
+- scripts- Lua scripts which Redis can execute.
+- utils - random strings generator and the generic test function.
+- visualisation - a python program for visualizing the results.
+- correctnessTests.go - validate the behavior of the implemented commands.
+- loadTests.go - perform the benchmarks.
+
+** Results
+
+In every benchmark, we set N (number of iterations) to 50.
+
+** Benchmark A
+#+NAME:   fig:bench1
+[[./testExistsPerNumberOfParalleledTests.png]]
+
+** Benchmark B
+#+NAME:   fig:bench2
+[[./testMAddPerNumberOfItems.png]]
+- In every MADD test there was just one call.
+
+** Benchmark C
+#+NAME:   fig:bench3
+[[./testMAddPerNumberOfParalleledTests.png]]
+- In every MADD command 10 records were added.
+
+** Benchmark D
+#+NAME:   fig:bench4
+[[./testMExistsPerNumberOfItems.png]]
+- In every MExists test there was just one call.
+
+** Benchmark E
+#+NAME:   fig:bench5
+[[./testMExistsPerNumberOfItemsAlwaysNegative.png]]
+- In every MExists test there was just one call.
+
+
 As seen in the following graphs, prefix
 filter in par with the state-of-the-art filters.
 
 Although there is no improvement in any benchmark, the other filters
 outperform prefix filter at most by a constant factor (and not by an
 order of magnitude).
-
-
-** TODO Benchmark A
-#+NAME:   fig:bench1
-[[./testExistsPerNumberOfParalleledTests.png]]
-
-** TODO Benchmark B
-#+NAME:   fig:bench2
-[[./testMAddPerNumberOfItems.png]]
-
-** TODO Benchmark C
-#+NAME:   fig:bench3
-[[./testMAddPerNumberOfParalleledTests.png]]
-
-** TODO Benchmark D
-#+NAME:   fig:bench4
-[[./testMExistsPerNumberOfItems.png]]
-
-** TODO Benchmark E
-#+NAME:   fig:bench5
-[[./testMExistsPerNumberOfItemsAlwaysNegative.png]]
-
-
 * TODO Conclusion                                                      :yael:
-- Theory vs Practice: it was expected that the performance of the prefix filter will surpass the performance of the other filters. However, we have seen that in practice this is not the case. It is possible that if further improvements are made in the implementation, the results will be consistent with the theoy
-- Learning and application:  working with special server with special capabilities: AVX512
-- use of external packages
-- Reading and deep understanding of the prefix filter implementation
-
 
 \bibliographystyle{plain}
 \bibliography{workshop.bib}
