@@ -57,9 +57,56 @@ of keys that were inserted into the prefix filter and whose dedicated
 bin is $i$.
 \end{invariant}
 
-*** TODO Implementation                                              :yael:
+*** Implementation
 
-requires AVX512...
+The FilterAPI struct is implemented in a cpp source file called "wrrapers.hpp". The prefix filter is a generic type, which implemented by FilterAPI:
+#+begin_src cpp
+template<typename filterTable>
+struct FilterAPI<Prefix_Filter<filterTable>> {
+  using Table = Prefix_Filter<filterTable>;
+  #+end_src
+  In wrapperc.hpp we find the implementation of the following methods:
+
+  #1. ConstructFromAddCount: the constructor
+  #+begin_src cpp
+  static Table ConstructFromAddCount(size_t add_count)
+  #+end_src
+  #2. Add: add a key to the prefix filter
+  #+begin_src cpp
+  static void Add(u64 key, Table *table)
+  #+end_src
+  #3. get_max_capacity: get max capacity of items that the filter can contain
+  #+begin_src cpp
+  static auto get_max_capacity(Table *table)
+  #+end_src
+  #4. Remove: the implementaion is not supporting this method
+  #+begin_src cpp
+  static void Remove(u64 key, Table *table)
+  #+end_src
+  #5.  Contain: check if the prefix filter contais the key
+  #+begin_src cpp
+  CONTAIN_ATTRIBUTES static bool Contain(u64 key, const Table *table)
+  #+end_src
+  #6. get_name: returns the name of the filter
+  #+begin_src cpp
+  static std::string get_name(const Table *table)
+  #+end_src
+  #7. get_functionality: returns a bit that represents some capability of the filter. for example, the third bit represents capability of deletions.
+  #+begin_src cpp
+  static auto get_functionality(const Table *table)
+  #+end_src
+  #8. get_ID: retuns an identifier of the prefix filter
+  #+begin_src cpp
+  static auto get_ID(const Table *table)
+  #+end_src
+  #9. get_byte_size: returns the size of the filter in bytes units
+  #+begin_src cpp
+  static size_t get_byte_size(const Table *table)
+  #+end_src
+  #10 . get_cap: returns the current capacity of the prefix filter
+  #+begin_src cpp
+  static size_t get_cap(const Table *table)
+  #+end_src
 
 ** Redis
 
