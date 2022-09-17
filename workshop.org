@@ -1,0 +1,194 @@
+#+TITLE: Extending Redis with the Prefix Filter
+#+OPTIONS: toc:nil num:nil ^:{}
+#+AUTHOR: Yael Barash, Hadar Tal, Eshel Yaron
+#+bibliography: workshop.bib
+#+STARTUP: inlineimages indent contents
+#+LATEX_HEADER: \usepackage{natbib}
+
+* TODO Introduction
+
+* Background: what we learned about Redis and PF
+
+** Prefix Filter
+*** TODO Theory
+
+In \cite{even2022prefix}, the authors present the Prefix Filter, an
+incremental filter that aims to be near optimal in its space
+requirements, and provide fast queries and insertions, in comparison
+to state-of-the-art filters.
+
+The prefix filter uses a novel approach for resolving hash collisions...
+
+*** TODO Implementation
+
+** Redis
+*** TODO Introduction
+*** TODO The Redis module interface
+
+* Challenges and solutions: what problems we encountered and how we solved them
+
+** TODO Developing on a remote host
+
+** TODO Preparing the prefix filter for embedding in a shared object
+
+** TODO Adapting the prefix filter interface to the Redis module interface
+
+** TODO Creating a setup for high performance benchmarks
+
+** Design
+
+In high-level, the project is constructed from the following components:
+- An implementation of the Prefix Filter data structure, adapted from
+  [cite:@even2022prefix].
+- A Redis module (shared library) exposing the Prefix Filter
+  operations as Redis commands under the such as =PF.ADD=.
+- A framework for running benchmarks against Redis filter modules.
+- Scripts for instrumenting the Redis server.
+
+Our Redis module is implemented in the C source file =module.c=, which
+includes a header file called =redismodule.h= which defines the Redis
+module API and ABI.  =module.c= further includes the header file
+=wrappers.hpp= from our adapted Prefix Filter implementation, which
+defines a generic API for filters in the C++ language.
+
+In essence, =module.c= is tasked with implementing a bridge, or an
+adapter, between the two interfaces.
+
+*** Redis module initialization
+
+As dictated by the Redis module API
+[[https://redis.io/docs/reference/modules/]], our Redis module defines a
+symbol =RedisModule_OnLoad=, implemented by a C function of the same
+name in =module.c=.  The =OnLoad= function is invoked by the Redis runtime
+upon loading a dynamic module, and its role is to initialize the
+module and register any provided commands for later use.
+
+The Redis module API provide the =RedisModule_Init= function for
+initializing dynamic modules as part of their =OnLoad= routines.  Such
+is the case also in our =OnLoad= implementation, which invokes
+=RedisModule_Init= as its first step and registers through it the
+command namespace =PF= for Prefix Filter commands.
+
+Next, our =OnLoad= routine leverages the =RedisModule_CreateCommand=
+function from the Redis module API to register a sequence of commands
+for working with the underlying Prefix Filter through the Redis
+interface.
+
+*** Provided Redis Commands
+
+**** =PF.RESERVE=
+
+The =PF.RESERVE= command creates an empty Prefix Filter.  The command
+takes two arguments, a =name= argument and a =capacity= argument.  The
+=name= argument is a string that can later be used to refer to the
+created filter, and the =capacity= argument is an integer used to set
+its maximum capacity.
+
+**** =PF.ADD=
+
+The =PF.ADD= command adds an element to a Prefix Filter.  The command
+takes two arguments, a =name= argument and an =item= argument.  The =name=
+argument specifies which Prefix Filter to add to, and should match the
+name given to that filter upon creation with =PF.RESERVE=.  The =item=
+argument is a string to be added as an element to the filter.
+
+**** =PF.EXISTS=
+
+The =PF.EXISTS= command checks whether a given Prefix Filter contains a
+specific element.  The command takes two arguments, a =name= argument
+and an =item= argument.  The =name= argument specifies which Prefix Filter
+to check for the element, and the =item= argument is the element to test
+for existence in the table.  As is generally the case for filters,
+this command may yield false positive results, meaning it may succeed
+although the given element had never been inserted into the table.
+
+**** =PF.MADD=
+
+The =PF.MADD= command is an enhanced version of the =PF.ADD= command which
+allows for specifying any number of elements to add to the given
+Prefix Filter.  The first argument to =PF.MADD= is the name of the
+Prefix Filter to add elements to, and the rest of the arguments are
+treated as items to add to the filter.  The command returns an array
+of integers, one for each input element.  The returned array contains
+=1= in each index =i= such that that =i='th input element was newly added to
+the filter, and =0= in the rest.
+
+**** =PF.MEXISTS=
+
+The =PF.MEXISTS=, similarly to =PF.MADD=, is an enhanced version of the
+=PF.EXISTS= command which allows for specifying any number of elements
+to to the given Prefix Filter.  The first argument to =PF.MADD= is the
+name of the Prefix Filter to add elements to, and the rest of the
+arguments are treated as items to add to the filter.  The command
+returns an array of integers, which contains =1= in each index =i= such
+that that =i='th input element exists in the filter, and =0= in the rest.
+
+**** =PF.INFO=
+
+The =PF.INFO= command takes a single argument, the name of an existing
+Prefix Filter table and returns information about the status of the
+table.
+
+#+begin_src
+127.0.0.1:6379> pf.reserve my_table 1024
+OK
+127.0.0.1:6379> pf.info my_table
+1) Capacity
+2) (integer) 1024
+3) Filled
+4) (integer) 0
+5) Size
+6) (integer) 1568
+#+end_src
+
+* Evaluation: Comparison of the filters (Bloom vs. cuckoo vs. prefix)
+
+A Benchmark in Performance Testing is a metric or a point of reference
+against which software products or services can be compared to assess
+the quality measures. In other words, Benchmark means a set standard
+that helps to determine the quality of a software product or a
+service. We can benchmark a software product or service to assess its
+quality.
+
+We would like to compare the performance of the filters to determine
+if there is any improvment by using the implemented data structure –
+prefix filter. Filter data structures are used to test whether an
+element is a member of a set. Particullary in redis, In-Memory filters
+let us unswer that question in a near-realtime duration, so while
+trying to compare the filters we should think about the filters's
+latency while adding and querying data. We created performence tests
+which measure the duration of the multi-add and multi-exists commands
+under different amount of items in the command and increasing amount
+of concurrent requests.
+
+As seen in the following graphs, prefix
+filter in par with the state-of-the-art filters.
+
+Although there is no improvement in any benchmark, the other filters
+outperform prefix filter at most by a constant factor (and not by an
+order of magnitude).
+
+
+** TODO Benchmark A
+#+NAME:   fig:bench1
+[[./testExistsPerNumberOfParalleledTests.png]]
+
+** TODO Benchmark B
+#+NAME:   fig:bench2
+[[./testMAddPerNumberOfItems.png]]
+
+** TODO Benchmark C
+#+NAME:   fig:bench3
+[[./testMAddPerNumberOfParalleledTests.png]]
+
+** TODO Benchmark D
+#+NAME:   fig:bench4
+[[./testMExistsPerNumberOfItems.png]]
+
+** TODO Benchmark E
+#+NAME:   fig:bench5
+[[./testMExistsPerNumberOfItemsAlwaysNegative.png]]
+
+
+\bibliographystyle{plain}
+\bibliography{workshop.bib}
