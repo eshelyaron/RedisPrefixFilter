@@ -62,8 +62,25 @@ bin is $i$.
 requires AVX512...
 
 ** Redis
-*** TODO Introduction                                               :hadar:
-*** TODO The Redis module interface                                 :hadar:
+
+Redis is an open source, in-memory data structure store used as a database, cache,
+message broker, and streaming engine. Redis provides data structures such as strings,
+hashes, lists, sets, sorted sets, bitmaps, etc. Redis has built-in replication,
+Lua scripting, LRU eviction, transactions, and different levels of on-disk persistence,
+and provides high availability \cite{https://redis.io/docs/about/}.
+Redis is one of the most popular technologies and became a synonym
+for an In-Memory database. Furthermore, it repeatedly occures in the Stack Overflow’s
+annual developer survey under "most loved databases" catagory.
+\cite{https://redis.com/blog/redis-is-the-most-loved-database-for-the-4th-year-in-a-row/}.
+
+*** The Redis modules interface
+
+Redis modules make it possible to extend Redis functionality using external modules,
+rapidly implementing new Redis commands with features similar to what can be done inside the core itself.
+The full API that we used can be found in the official Redis documentation,
+and among other things contains loading module, creating commands and working with
+Redis module data objects.
+\cite{https://redis.io/docs/reference/modules/}
 
 * Challenges and solutions: what problems we encountered and how we solved them
 
@@ -93,7 +110,9 @@ all of the C++ source files of the prefix filter along with our
 
 ** TODO Adapting the prefix filter interface to the Redis module interface :eshel:
 
-** TODO Creating a setup for high performance benchmarks             :hadar:
+** Creating a setup for high performance benchmarks
+
+
 
 ** Design
 
@@ -211,6 +230,8 @@ OK
 
 * Evaluation: Comparison of the filters (Bloom vs. cuckoo vs. prefix)
 
+** Introduction
+
 A Benchmark in Performance Testing is a metric or a point of reference
 against which software products or services can be compared to assess
 the quality measures. In other words, Benchmark means a set standard
@@ -229,35 +250,59 @@ which measure the duration of the multi-add and multi-exists commands
 under different amount of items in the command and increasing amount
 of concurrent requests.
 
+** Implementation
+
+While creating the benchmarks, we decided to use the Golang programing language. Golang is expressive, clean, and efficient. Its concurrency mechanisms make it easy to write programs that get the most out of multicore and networked machines. We also had previous experience with creating a Redis client in Go that is able to perform non-standard Redis commands by using Lua scripts.
+
+We have created a generic test function which receive -
+- N - number of iterations
+- M - number of parallel tests
+- F - function to be tested
+and returns the average durtion of N iterations, each contains M concurrent callings to F.
+
+The benchmark folder includes -
+- redis - a Redis client which is able to perform non-standard Redis commands.
+- scripts- Lua scripts which Redis can execute.
+- utils - random strings generator and the generic test function.
+- visualisation - a python program for visualizing the results.
+- correctnessTests.go - validate the behavior of the implemented commands.
+- loadTests.go - perform the benchmarks.
+
+** Results
+
+In every benchmark, we set N (number of iterations) to 50.
+
+** Benchmark A
+#+NAME:   fig:bench1
+[[./testExistsPerNumberOfParalleledTests.png]]
+
+** Benchmark B
+#+NAME:   fig:bench2
+[[./testMAddPerNumberOfItems.png]]
+- In every MADD test there was just one call.
+
+** Benchmark C
+#+NAME:   fig:bench3
+[[./testMAddPerNumberOfParalleledTests.png]]
+- In every MADD command 10 records were added.
+
+** Benchmark D
+#+NAME:   fig:bench4
+[[./testMExistsPerNumberOfItems.png]]
+- In every MExists test there was just one call.
+
+** Benchmark E
+#+NAME:   fig:bench5
+[[./testMExistsPerNumberOfItemsAlwaysNegative.png]]
+- In every MExists test there was just one call.
+
+
 As seen in the following graphs, prefix
 filter in par with the state-of-the-art filters.
 
 Although there is no improvement in any benchmark, the other filters
 outperform prefix filter at most by a constant factor (and not by an
 order of magnitude).
-
-
-** TODO Benchmark A
-#+NAME:   fig:bench1
-[[./testExistsPerNumberOfParalleledTests.png]]
-
-** TODO Benchmark B
-#+NAME:   fig:bench2
-[[./testMAddPerNumberOfItems.png]]
-
-** TODO Benchmark C
-#+NAME:   fig:bench3
-[[./testMAddPerNumberOfParalleledTests.png]]
-
-** TODO Benchmark D
-#+NAME:   fig:bench4
-[[./testMExistsPerNumberOfItems.png]]
-
-** TODO Benchmark E
-#+NAME:   fig:bench5
-[[./testMExistsPerNumberOfItemsAlwaysNegative.png]]
-
-
 * TODO Conclusion                                                      :yael:
 
 \bibliographystyle{plain}
