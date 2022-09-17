@@ -26,7 +26,7 @@ template<typename filterTable>
 struct FilterAPI<Prefix_Filter<filterTable>> {
   using Table = Prefix_Filter<filterTable>;
   #+end_src
-  In wrapperc.hpp we find the implementation of the following methods:
+  In wrappers.hpp we find the implementation of the following methods:
   
   #1. ConstructFromAddCount: the constructor
   #+begin_src cpp
