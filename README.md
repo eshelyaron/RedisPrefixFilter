@@ -79,13 +79,19 @@ $ ls -la *.png
 -rw-r--r-- 1 user user 33571 Sep 13 22:01 testMExistsPerNumberOfItems.png
 ```
 
+There is also ability to get the duration of a specific command against a specific filter type.  
+After building the benchmark module (go build) we can run the program with the following arguments:
+./benchmark ${command} ${filter_type} ${number_of_concurrent_calls} ${number_of_items_in_each_call}
+where filter_type in {bf, cf, pf} and command is madd or mexists.
 
+For example
 
-
-
-
-
-
-
-
+```
+$ ./benchmark madd bf 4 3000
+INFO[0001] total duration - 24.630169ms 
+$ ./benchmark mexists cf 4 1000
+INFO[0000] total duration - 5.365275ms 
+$ ./benchmark mexists pf 10 500
+INFO[0000] total duration - 7.47879ms
+```
 
