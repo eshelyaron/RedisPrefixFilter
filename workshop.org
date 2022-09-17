@@ -52,7 +52,7 @@ Redis module data objects.
 
 ** TODO Adapting the prefix filter interface to the Redis module interface :eshel:
 
-** Creating a setup for high performance benchmarks             :hadar:
+** Creating a setup for high performance benchmarks
 
 
 
@@ -203,16 +203,41 @@ We have created a generic test function which receive -
 and returns the average durtion of N iterations, each contains M concurrent callings to F.
 
 The benchmark folder includes -
-redis - a Redis client which is able to perform non-standard Redis commands.
-scripts- Lua scripts which Redis can execute.
-utils - random strings generator and the generic test function. 
-visualisation - a python program for visualizing the results. 
-correctnessTests.go - validate the behavior of the implemented commands. 
-loadTests.go - perform the benchmarks.
+- redis - a Redis client which is able to perform non-standard Redis commands.
+- scripts- Lua scripts which Redis can execute.
+- utils - random strings generator and the generic test function. 
+- visualisation - a python program for visualizing the results. 
+- correctnessTests.go - validate the behavior of the implemented commands. 
+- loadTests.go - perform the benchmarks.
 
 ** Results
 
-TODO numbers
+In every benchmark, we set N (number of iterations) to 50.
+
+** Benchmark A
+#+NAME:   fig:bench1
+[[./testExistsPerNumberOfParalleledTests.png]]
+
+** Benchmark B
+#+NAME:   fig:bench2
+[[./testMAddPerNumberOfItems.png]]
+- In every MADD test there was just one call.
+
+** Benchmark C
+#+NAME:   fig:bench3
+[[./testMAddPerNumberOfParalleledTests.png]]
+- In every MADD command 10 records were added.
+
+** Benchmark D
+#+NAME:   fig:bench4
+[[./testMExistsPerNumberOfItems.png]]
+- In every MExists test there was just one call.
+
+** Benchmark E
+#+NAME:   fig:bench5
+[[./testMExistsPerNumberOfItemsAlwaysNegative.png]]
+- In every MExists test there was just one call.
+
 
 As seen in the following graphs, prefix
 filter in par with the state-of-the-art filters.
@@ -220,29 +245,6 @@ filter in par with the state-of-the-art filters.
 Although there is no improvement in any benchmark, the other filters
 outperform prefix filter at most by a constant factor (and not by an
 order of magnitude).
-
-
-** TODO Benchmark A
-#+NAME:   fig:bench1
-[[./testExistsPerNumberOfParalleledTests.png]]
-
-** TODO Benchmark B
-#+NAME:   fig:bench2
-[[./testMAddPerNumberOfItems.png]]
-
-** TODO Benchmark C
-#+NAME:   fig:bench3
-[[./testMAddPerNumberOfParalleledTests.png]]
-
-** TODO Benchmark D
-#+NAME:   fig:bench4
-[[./testMExistsPerNumberOfItems.png]]
-
-** TODO Benchmark E
-#+NAME:   fig:bench5
-[[./testMExistsPerNumberOfItemsAlwaysNegative.png]]
-
-
 * TODO Conclusion                                                      :yael:
 
 \bibliographystyle{plain}
