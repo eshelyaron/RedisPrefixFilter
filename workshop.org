@@ -5,12 +5,12 @@
 #+STARTUP: inlineimages indent contents
 #+LATEX_HEADER: \usepackage{natbib}
 
-* TODO Introduction
+* TODO Introduction                                                 :eshel:
 
 * Background: what we learned about Redis and PF
 
 ** Prefix Filter
-*** TODO Theory
+*** TODO Theory                                                   :eshel:
 
 In \cite{even2022prefix}, the authors present the Prefix Filter, an
 incremental filter that aims to be near optimal in its space
@@ -19,21 +19,23 @@ to state-of-the-art filters.
 
 The prefix filter uses a novel approach for resolving hash collisions...
 
-*** TODO Implementation
+*** TODO Implementation                                              :yael:
+
+requires AVX512...
 
 ** Redis
-*** TODO Introduction
-*** TODO The Redis module interface
+*** TODO Introduction                                               :hadar:
+*** TODO The Redis module interface                                 :hadar:
 
 * Challenges and solutions: what problems we encountered and how we solved them
 
-** TODO Developing on a remote host
+** TODO Developing on a remote host                                  :eshel:
 
-** TODO Preparing the prefix filter for embedding in a shared object
+** TODO Preparing the prefix filter for embedding in a shared object :eshel:
 
-** TODO Adapting the prefix filter interface to the Redis module interface
+** TODO Adapting the prefix filter interface to the Redis module interface :eshel:
 
-** TODO Creating a setup for high performance benchmarks
+** TODO Creating a setup for high performance benchmarks             :hadar:
 
 ** Design
 
@@ -141,6 +143,14 @@ OK
 6) (integer) 1568
 #+end_src
 
+** Future work
+
+*** First insert ???
+
+*** TODO Better sorting                                             :eshel:
+
+*** TODO Dump and load - persist Prefix Filter to disk!
+
 * Evaluation: Comparison of the filters (Bloom vs. cuckoo vs. prefix)
 
 A Benchmark in Performance Testing is a metric or a point of reference
@@ -189,6 +199,8 @@ order of magnitude).
 #+NAME:   fig:bench5
 [[./testMExistsPerNumberOfItemsAlwaysNegative.png]]
 
+
+* TODO Conclusion                                                      :yael:
 
 \bibliographystyle{plain}
 \bibliography{workshop.bib}
