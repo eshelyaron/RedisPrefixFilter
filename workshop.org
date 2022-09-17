@@ -5,7 +5,17 @@
 #+STARTUP: inlineimages indent contents
 #+LATEX_HEADER: \usepackage{natbib}
 
-* TODO Introduction                                                 :eshel:
+* Introduction
+
+This report presents our work on implementing a Redis module that
+provides an interface to the /Prefix Filter/ data structure.
+
+The first section includes background about the prefix filter and
+Redis in general.  The second section describes our implementation and
+explore future directions for development.  In the third section we
+evaluate our implementation compared to the standard Bloom Filter and
+Cuckoo Filter Redis modules.  The fourth and final section concludes
+our work and experiences.
 
 * Background: what we learned about Redis and PF
 
