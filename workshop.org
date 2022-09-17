@@ -67,7 +67,19 @@ requires AVX512...
 
 * Challenges and solutions: what problems we encountered and how we solved them
 
-** TODO Developing on a remote host                                  :eshel:
+** Developing on a remote host
+
+Due to the fact that the prefix filter only runs and compiles on a
+Linux hosts with an Intel processor with the AVX512 CPU vector
+extension, the vast majority of the research and development work in
+this project had to be carried out on a remote server that has this
+extension.  This was challenging as we had to adapt our existing
+development setups to achieve an efficient workflow.  To minimize the
+cost of adapting to working on a remote development host, we leveraged
+GNU Emacs with TRAMP\footnote{See https://www.gnu.org/software/tramp/}
+which allowed us to edit, compile and execute remote files seamlessly
+while retaining the exact same setup and workflow we use for local
+development.
 
 ** TODO Preparing the prefix filter for embedding in a shared object :eshel:
 
