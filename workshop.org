@@ -81,7 +81,15 @@ which allowed us to edit, compile and execute remote files seamlessly
 while retaining the exact same setup and workflow we use for local
 development.
 
-** TODO Preparing the prefix filter for embedding in a shared object :eshel:
+** Preparing the prefix filter for embedding in a shared object
+
+Unlike the original prefix filter implementation which built the
+prefix filter as part of a standalone executable written solely in
+C++, our requirement was to embed the prefix filter implementation in
+a shared object that implements the Redis module ABI.  To do that we
+wrote a Makefile that leverages =g++= to build a shared library from the
+all of the C++ source files of the prefix filter along with our
+=module.c= source file which implements the Redis module API.
 
 ** TODO Adapting the prefix filter interface to the Redis module interface :eshel:
 
