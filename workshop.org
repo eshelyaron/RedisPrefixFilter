@@ -197,9 +197,9 @@ of concurrent requests.
 While creating the benchmarks, we decided to use the Golang programing language. Golang is expressive, clean, and efficient. Its concurrency mechanisms make it easy to write programs that get the most out of multicore and networked machines. We also had previous experience with creating a Redis client in Go that is able to perform non-standard Redis commands by using Lua scripts. 
 
 We have created a generic test function which receive -
-N - number of iterations 
-M - number of parallel tests
-F - function to be tested 
+- N - number of iterations 
+- M - number of parallel tests 
+- F - function to be tested
 and returns the average durtion of N iterations, each contains M concurrent callings to F.
 
 The benchmark folder includes -
