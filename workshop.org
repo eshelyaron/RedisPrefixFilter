@@ -41,11 +41,12 @@ The prefix filter is a two-level structure, with each level storing
 /key fingerprints/, which are short hashes of the keys stored in the
 filter.  The first level is called the /bin table/, it is an array of
 compact dictionaries that facilitate constant time operations.  These
-dictionaries are called /pocket dictionaries/.  Pocket dictionaries have
-a very limited capacity, thus not all key fingerprints reside in the
-bin array.  The second level is called the /spare/. It holds
-fingerprints of keys that were evicted from the bin array.  The spare
-can implemented with any incremental filter.
+dictionaries are called /pocket dictionaries/.  The pocket dictionaries
+are a space-efficient representation of a bounded-size set, which uses
+the Elias-Fano encoding. Due to the bounded size of the PDs, not all
+key fingerprints reside in the bin array.  The second level is called
+the /spare/. It holds fingerprints of keys that were evicted from the
+bin array.  The spare can implemented with any incremental filter.
 
 The essence of the prefix key is the policy it employs to choose which
 fingerprints to forward to the spare.  The policy maintains an
@@ -59,74 +60,78 @@ bin is $i$.
 
 *** Implementation
 
-The FilterAPI struct is implemented in a cpp source file called "wrappers.hpp". The prefix filter is a generic type, which implemented by FilterAPI:
-#+begin_src cpp
-template<typename filterTable>
-struct FilterAPI<Prefix_Filter<filterTable>> {
-  using Table = Prefix_Filter<filterTable>;
-  #+end_src
-  In wrappers.hpp we find the implementation of the following methods:
-  1. ConstructFromAddCount: the constructor
-  #+begin_src cpp
-  static Table ConstructFromAddCount(size_t add_count)
-  #+end_src
-  2. Add: add a key to the prefix filter
-  #+begin_src cpp
-  static void Add(u64 key, Table *table)
-  #+end_src
-  3. get_max_capacity: get max capacity of items that the filter can contain
-  #+begin_src cpp
-  static auto get_max_capacity(Table *table)
-  #+end_src
-  4. Remove: the implementaion is not supporting this method
-  #+begin_src cpp
-  static void Remove(u64 key, Table *table)
-  #+end_src
-  5.  Contain: check if the prefix filter contais the key
-  #+begin_src cpp
-  CONTAIN_ATTRIBUTES static bool Contain(u64 key, const Table *table)
-  #+end_src
-  6. get_name: returns the name of the filter
-  #+begin_src cpp
-  static std::string get_name(const Table *table)
-  #+end_src
-  7. get_functionality: returns a bit that represents some capability of the filter. for example, the third bit represents capability of deletions.
-  #+begin_src cpp
-  static auto get_functionality(const Table *table)
-  #+end_src
-  8. get_ID: retuns an identifier of the prefix filter
-  #+begin_src cpp
-  static auto get_ID(const Table *table)
-  #+end_src
-  9. get_byte_size: returns the size of the filter in bytes units
-  #+begin_src cpp
-  static size_t get_byte_size(const Table *table)
-  #+end_src
-  10 . get_cap: returns the current capacity of the prefix filter
-  #+begin_src cpp
-  static size_t get_cap(const Table *table)
-  #+end_src
+The original implementation of the prefix filter written in C++, and
+it is notably intended to be used for benchmarking different filters.
+Thus the original implementation defines a generic filter API via a
+C++ generic struct called =FilterAPI=, which is instantiated with
+different underlying filter implementations, one of which is the
+prefix filter.
+
+#+begin_src c++
+  template<typename Table> struct FilterAPI {};
+#+end_src
+
+Instances of =FilterAPI= implement a standard set of operations. The
+most important methods for our discussion are:
+
+#+begin_src c++
+  // create a new filter
+  static Table ConstructFromAddCount(size_t add_count);
+  // add to the filter
+  static void Add(uint64_t key, Table *table);
+  // check if a key is in the filter
+  static bool Contain(uint64_t key, const Table *table);
+  // remove a key from the filter
+  static void Remove(uint64_t key, Table *table);
+  // space consumption
+  static size_t get_byte_size(const Table *table);
+  // capacity
+  static size_t get_cap(const Table *table);
+#+end_src
+
+The prefix filter itself is implemented as a generic class, which can
+be instantiated with different implementations for the spare table
+used by the prefix table to store fingerprints that were evicted from
+the bin array.
+
+#+begin_src c++
+  template<typename Table> class Prefix_Filter {
+    ...
+    public:
+    Prefix_Filter(size_t max_items, const float loads[2]) {...}
+    ...
+  }
+#+end_src
+
+The pocket dictionaries are implemented as 256 bit wide integers
+(=__m256i=), which are manipulated directly using Intel AVX512 vector
+instructions.  Accordingly, the entire bin array is implemented as a
+consecutive array of pocket dictionaries.
 
 ** Redis
 
-Redis is an open source, in-memory data structure store used as a database, cache,
-message broker, and streaming engine. Redis provides data structures such as strings,
-hashes, lists, sets, sorted sets, bitmaps, etc. Redis has built-in replication,
-Lua scripting, LRU eviction, transactions, and different levels of on-disk persistence,
-and provides high availability \cite{https://redis.io/docs/about/}.
-Redis is one of the most popular technologies and became a synonym
-for an In-Memory database. Furthermore, it repeatedly occures in the Stack Overflow’s
-annual developer survey under "most loved databases" catagory.
-\cite{https://redis.com/blog/redis-is-the-most-loved-database-for-the-4th-year-in-a-row/}.
+Redis is an open source, in-memory data structure store used as a
+database, cache, message broker, and streaming engine. Redis provides
+data structures such as strings, hashes, lists, sets, sorted sets,
+bitmaps, etc. Redis has built-in replication, Lua scripting, LRU
+eviction, transactions, and different levels of on-disk persistence,
+and provides high availability[fn:1].  Redis is one of the
+most popular technologies and became a synonym for an In-Memory
+database. Furthermore, it repeatedly occures in the Stack Overflow’s
+annual developer survey under "most loved databases" category[fn:2]..
 
 *** The Redis modules interface
 
-Redis modules make it possible to extend Redis functionality using external modules,
-rapidly implementing new Redis commands with features similar to what can be done inside the core itself.
-The full API that we used can be found in the official Redis documentation,
-and among other things contains loading module, creating commands and working with
-Redis module data objects.
-\cite{https://redis.io/docs/reference/modules/}
+Redis modules make it possible to extend Redis functionality using
+external modules, rapidly implementing new Redis commands with
+features similar to what can be done inside the core itself.  The full
+API that we used can be found in the official Redis documentation, and
+among other things contains loading module, creating commands and
+working with Redis module data objects[fn:3].
+
+[fn:1] https://redis.io/docs/about/
+[fn:2] https://redis.com/blog/redis-is-the-most-loved-database-for-the-4th-year-in-a-row/
+[fn:3] https://redis.io/docs/reference/modules/
 
 * Challenges and solutions: what problems we encountered and how we solved them
 
@@ -139,10 +144,12 @@ this project had to be carried out on a remote server that has this
 extension.  This was challenging as we had to adapt our existing
 development setups to achieve an efficient workflow.  To minimize the
 cost of adapting to working on a remote development host, we leveraged
-GNU Emacs with TRAMP\footnote{See https://www.gnu.org/software/tramp/}
+GNU Emacs with TRAMP[fn:4].
 which allowed us to edit, compile and execute remote files seamlessly
 while retaining the exact same setup and workflow we use for local
 development.
+
+[fn:4] https://www.gnu.org/software/tramp/
 
 ** Preparing the prefix filter for embedding in a shared object
 
@@ -154,17 +161,11 @@ wrote a Makefile that leverages =g++= to build a shared library from the
 all of the C++ source files of the prefix filter along with our
 =module.c= source file which implements the Redis module API.
 
-** TODO Adapting the prefix filter interface to the Redis module interface :eshel:
-
-** Creating a setup for high performance benchmarks
-
-
-
 ** Design
 
 In high-level, the project is constructed from the following components:
 - An implementation of the Prefix Filter data structure, adapted from
-  [cite:@even2022prefix].
+  \cite{even2022prefix}.
 - A Redis module (shared library) exposing the Prefix Filter
   operations as Redis commands under the such as =PF.ADD=.
 - A framework for running benchmarks against Redis filter modules.
@@ -236,7 +237,13 @@ Prefix Filter to add elements to, and the rest of the arguments are
 treated as items to add to the filter.  The command returns an array
 of integers, one for each input element.  The returned array contains
 =1= in each index =i= such that that =i='th input element was newly added to
-the filter, and =0= in the rest.
+the filter, and =0= in the rest.  To facilitate efficient insertion of
+multiple keys at once, we annotate each key with its original position
+in the input array and then sort the resulting array of annotated keys
+according to the order of the bins to which the keys may be inserted.
+Then insertion follows the sorted order of the annotated keys, so
+insertions to adjacent bins takes place in consecutive steps, which
+maximizes memory locality for the entire process.
 
 **** =PF.MEXISTS=
 
@@ -318,43 +325,50 @@ The benchmark folder includes -
 
 In every benchmark, we set N (number of iterations) to 50.
 
-** Benchmark A
+*** Benchmark A
 #+NAME:   fig:bench1
 [[./testExistsPerNumberOfParalleledTests.png]]
 
-** Benchmark B
+*** Benchmark B
 #+NAME:   fig:bench2
 [[./testMAddPerNumberOfItems.png]]
 - In every MADD test there was just one call.
 
-** Benchmark C
+*** Benchmark C
 #+NAME:   fig:bench3
 [[./testMAddPerNumberOfParalleledTests.png]]
 - In every MADD command 10 records were added.
 
-** Benchmark D
+*** Benchmark D
 #+NAME:   fig:bench4
 [[./testMExistsPerNumberOfItems.png]]
 - In every MExists test there was just one call.
 
-** Benchmark E
+*** Benchmark E
 #+NAME:   fig:bench5
 [[./testMExistsPerNumberOfItemsAlwaysNegative.png]]
 - In every MExists test there was just one call.
 
 
 As seen in the following graphs, prefix
-filter in par with the state-of-the-art filters.
+filter is in par with the state-of-the-art filters.
 
-Although there is no improvement in any benchmark, the other filters
-outperform prefix filter at most by a constant factor (and not by an
-order of magnitude).
-* TODO Conclusion                                                      :yael:
-- The work was mainly divided into two parts: implementing the prefix filter code into Redis and Compare the performance of prefix pilter with bloom filter and cuckoo filter
+Although the benchmarks don't show a clear improvement, the other
+filters outperform prefix filter at most by a constant factor (and not
+by an order of magnitude).
 
-- results and conclusions: it was expected that the performance of the prefix filter will surpass the performance of bloom filter. However, we We saw that in all the indices we performed this is not the case. It is possible that if further improvements are made in the implementation, the results will be consistent with the theoy
-
-- Learning and application:  during the work We learned a lot about the theory and the implementation of the prefix filter, as well as working with redis server and RedisBloom.
+* Conclusion
+- The work was mainly divided into two parts: implementing the prefix
+  filter code into Redis and Compare the performance of prefix pilter
+  with bloom filter and cuckoo filter
+- results and conclusions: it was expected that the performance of the
+  prefix filter will surpass the performance of bloom filter. However,
+  we We saw that in all the indices we performed this is not the
+  case. It is possible that if further improvements are made in the
+  implementation, the results will be consistent with the theoy
+- Learning and application: during the work We learned a lot about the
+  theory and the implementation of the prefix filter, as well as
+  working with redis server and RedisBloom.
 
 
 \bibliographystyle{plain}
