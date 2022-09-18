@@ -9,7 +9,9 @@
 * Introduction
 
 This report presents our work on implementing a Redis module that
-provides an interface to the /Prefix Filter/ data structure.
+provides an interface to the /Prefix Filter/ data structure.  The
+implementation is hosted on Github at
+\url{https://github.com/eshelyaron/RedisPrefixFilter}.
 
 The first section includes background about the prefix filter and
 Redis in general.  The second section describes our implementation and
