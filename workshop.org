@@ -18,10 +18,10 @@ evaluate our implementation compared to the standard Bloom Filter and
 Cuckoo Filter Redis modules.  The fourth and final section concludes
 our work and experiences.
 
-* Background: what we learned about Redis and PF
+* Background: Redis and the Prefix Filter
 
 ** Prefix Filter
-*** Theory
+*** PF Theory
 
 In \cite{even2022prefix}, the authors present the Prefix Filter, an
 incremental filter that aims to be near optimal in its space
@@ -58,7 +58,7 @@ of keys that were inserted into the prefix filter and whose dedicated
 bin is $i$.
 \end{invariant}
 
-*** Implementation
+*** PF Implementation
 
 The original implementation of the prefix filter written in C++, and
 it is notably intended to be used for benchmarking different filters.
@@ -133,7 +133,7 @@ working with Redis module data objects[fn:3].
 [fn:2] https://redis.com/blog/redis-is-the-most-loved-database-for-the-4th-year-in-a-row/
 [fn:3] https://redis.io/docs/reference/modules/
 
-* Challenges and solutions: what problems we encountered and how we solved them
+* Challenges and solutions
 
 ** Developing on a remote host
 
@@ -183,7 +183,7 @@ adapter, between the two interfaces.
 *** Redis module initialization
 
 As dictated by the Redis module API
-[[https://redis.io/docs/reference/modules/]], our Redis module defines a
+[fn:5], our Redis module defines a
 symbol =RedisModule_OnLoad=, implemented by a C function of the same
 name in =module.c=.  The =OnLoad= function is invoked by the Redis runtime
 upon loading a dynamic module, and its role is to initialize the
@@ -200,6 +200,7 @@ function from the Redis module API to register a sequence of commands
 for working with the underlying Prefix Filter through the Redis
 interface.
 
+[fn:5] https://redis.io/docs/reference/modules/
 *** Provided Redis Commands
 
 **** =PF.RESERVE=
@@ -275,11 +276,7 @@ OK
 
 ** Future directions
 
-*** Improved performance for initial insertions
-
-One edge case in
-
-*** Better sorting
+*** Faster sorting for multi commands
 
 It may be possible to improve the performance of the multi commands
 (=PF.MADD= and =PF.MEXITS=) by leveraging a different sorting algorithm
@@ -298,14 +295,37 @@ alternatives:
    reason we didn't find it preferable to the current implementation
    in our use case.
 
-2.
+2. =Highway= based quicksort - we considered using the =Highway= library
+   from Google[fn:6], a C++ library that provides portable SIMD/vector
+   intrinsics, but decided against it because we found that
+   integrating the entire library into our Redis module just for its
+   quicksort implementation was not warranted, seeing as it would have
+   also required non-trivial changes to our existing code to use the
+   =Highway= API.
 
+[fn:6] https://github.com/google/highway/
 
-*** TODO Dump and load - persist Prefix Filter to disk!
+*** Presisting the prefix filter
 
-* Evaluation: Comparison of the filters (Bloom vs. cuckoo vs. prefix)
+One interesting part of the Redis module API that our current
+implementation does not cover are the Redis Database save and /load
+methods/.  The RDB save and load methods are C callback functions that
+a Redis module provides for Redis to call when creating a persitent
+snapshot of the current state and loading a snapshot from disk,
+respectively.  These callbacks get a special IO handle and can use the
+=RedisModule_Save*= and =RedisModule_Load*= interface functions which
+allow for storing or retrieving values from the IO handle.  The only
+values supported directly by this API are numeric values up to 64 bit
+wide and strings of arbitrary size, hence the pocket dictionaries of
+the prefix table will could be persisted either as four consecutive 64
+bit integers, or as 32 byte long strings.  The entire bin array may
+also be persisted as on large string buffer.  In either case, care
+should be taken if persisted prefix tables are to be shared between
+hosts with different endianness.
 
-** Introduction
+* Evaluation
+
+** Benchmarks introduction
 
 A Benchmark in Performance Testing is a metric or a point of reference
 against which software products or services can be compared to assess
@@ -325,7 +345,7 @@ which measure the duration of the multi-add and multi-exists commands
 under different amount of items in the command and increasing amount
 of concurrent requests.
 
-** Implementation
+** Benchmarks implementation
 
 While creating the benchmarks, we decided to use the Golang programing
 language. Golang is expressive, clean, and efficient. Its concurrency
